@@ -1,14 +1,34 @@
 # 一件 Todo · Yijian Todo
 
+简体中文 · [English](README.en.md)
+
 一个竖排的桌面任务工具：诗句、层级任务，以及能帮忙调整清单的 AI 伙伴。提供中文和英文界面。
 
 Windows 使用 C# / .NET 8 / WPF；Ubuntu 使用 C# / .NET 8 / Avalonia 11。两个界面独立维护，共用任务逻辑、AI 工具接口、持久化、翻译与诗库。没有浏览器或 WebView，也没有常驻轮询服务。
+
+[下载安装包](https://github.com/mixwcat/ToDo/releases/latest) · [版本记录](https://github.com/mixwcat/ToDo/releases) · [反馈问题](https://github.com/mixwcat/ToDo/issues)
+
+## 下载与安装
+
+当前版本：**v0.1.0**。以下安装包均为 x86-64，普通用户推荐选择完整版。
+
+| 系统 | 完整版：自带 .NET 运行时 | 精简版：使用系统 .NET 运行时 |
+|---|---|---|
+| Windows 11 x64 | [安装包 · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-windows-x64-setup.exe) | [安装包 · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-windows-x64-lite-setup.exe) |
+| Ubuntu 22.04 / 24.04 amd64 | [deb · 31.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-ubuntu-amd64-lite.deb) |
+
+完整版和精简版选择一种安装即可。安装包不在源码仓库中，请从 GitHub Releases 下载。Windows 双击 `.exe` 安装；Ubuntu 使用 `sudo apt install ./下载的文件名.deb`，具体要求见下文。
+
+更新或卸载前先从托盘菜单退出应用；两端卸载均保留用户任务、偏好和已记住的 Key。当前 Windows 安装包尚未进行代码签名。
+
+Release 提供 [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/SHA256SUMS.txt)。Windows 用 `Get-FileHash 文件名 -Algorithm SHA256` 对照；Ubuntu 用 `sha256sum 文件名` 对照。下载全部安装包后，也可执行 `sha256sum -c SHA256SUMS.txt`。
 
 ## 项目结构
 
 ```text
 ToDo/
 ├── README.md
+├── README.en.md             # English documentation
 ├── YijianTodo.sln
 ├── windows/                 # Windows / WPF
 │   ├── build.ps1
@@ -25,9 +45,7 @@ ToDo/
 └── .github/workflows/       # Windows、Ubuntu 构建与产物归档
 ```
 
-原 `develop_win` 已改名为 `windows`，`html开发` 改名为 `prototype`。Windows 的真实任务和 Key 仍在原用户目录。
-
-上传 GitHub 时请上传整个项目根目录，包含 `shared`，不能只上传两个平台文件夹。`.gitignore` 已排除运行产物、构建缓存、本地状态和密钥文件；发布包适合放在 GitHub Releases。
+两个平台均依赖 `shared`，开发时请克隆完整仓库。`.gitignore` 已排除运行产物、构建缓存、本地状态和密钥文件。
 
 ## 功能
 
@@ -43,9 +61,11 @@ ToDo/
 - 诗句、对话及说明文字可拖选复制；按钮与菜单标签保持正常点击。任务标题通过右键菜单复制。
 - 任务自动保存，支持 JSON 导入导出。两端任务文件兼容，可通过导出、导入迁移；不会自动云同步。
 
+AI 按请求将任务清单和对话内容发送到你配置的服务；日常任务管理无需配置 AI。
+
 ## Windows
 
-Release 安装包位于根目录 `releases`：
+从 [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest) 下载安装包：
 
 | 安装包 | 使用方式 |
 |---|---|
@@ -54,9 +74,14 @@ Release 安装包位于根目录 `releases`：
 
 双击安装，为当前用户创建开始菜单、桌面入口和卸载项。安装位置默认是 `%LOCALAPPDATA%\Programs\YijianTodo`，无需管理员权限。升级和卸载前先从托盘退出；卸载保留 AppData 中的任务和 Key。当前生成的安装包没有代码签名。
 
-现有电脑双击 `windows/一件Todo.exe`，保留旁边的 `Assets` 文件夹。该本地构建使用共享 .NET 8 Desktop Runtime x64，此电脑已安装；新电脑使用本地构建或精简安装包时需要该运行时，完整安装包自带运行时。
+精简版需要 [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/8.0/runtime)，完整版自带运行时。自行构建的 `windows/一件Todo.exe` 也使用系统运行时，需保留旁边的 `Assets` 文件夹。
 
-开发需要 .NET 8 SDK。在根目录运行：
+开发需要 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 和 PowerShell 7，首次还原 NuGet 依赖需要网络连接。克隆后在项目根目录运行：
+
+```bash
+git clone https://github.com/mixwcat/ToDo.git
+cd ToDo
+```
 
 ```powershell
 .\windows\build.ps1
@@ -72,7 +97,7 @@ Release 安装包位于根目录 `releases`：
 
 ### 安装 .deb
 
-推荐使用根目录 `releases/YijianTodo-0.1.0-ubuntu-amd64.deb`，自带 .NET 运行时：
+从 [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest) 下载 `YijianTodo-0.1.0-ubuntu-amd64.deb`，自带 .NET 运行时，在下载目录执行：
 
 ```bash
 sudo apt install ./YijianTodo-0.1.0-ubuntu-amd64.deb
@@ -86,7 +111,7 @@ sudo apt install ./YijianTodo-0.1.0-ubuntu-amd64.deb
 
 ### 使用发布包
 
-将 `ubuntu/dist/yijian-todo-linux-x64.tar.gz` 复制到 Ubuntu 后：
+便携包通过下文的源码构建脚本生成，当前 Release 提供的是 `.deb` 安装包。将自行构建的 `ubuntu/dist/yijian-todo-linux-x64.tar.gz` 复制到 Ubuntu 后：
 
 ```bash
 tar -xzf yijian-todo-linux-x64.tar.gz
@@ -161,7 +186,7 @@ python ubuntu/build-deb.py --version 0.1.0 --lite
 
 将 `releases` 中的四个安装包和 `SHA256SUMS.txt` 放入 GitHub Release，说明可参考同目录的 `RELEASE-NOTES.md`。构建产物不进入源码提交；GitHub Actions 已配置两端安装包构建，可手动指定版本号。
 
-完整包包含私有 .NET 运行时，方便直接运行；精简包共用系统 .NET。Ubuntu 还需随应用携带 Avalonia 的图形及文字库，而 Windows 的 WPF 来自系统 .NET Desktop Runtime。两端采用相同方式打包比较体积才有意义；包大不等于运行时内存或 CPU 占用大。
+完整包包含私有 .NET 运行时，方便直接运行；精简包共用系统 .NET。Ubuntu 完整版安装后约 95 MB，包含 .NET 运行时、图形及文字渲染库，以及约 9 MB 的诗库和索引；精简版应用文件约 29 MB，但仍需要系统提供 .NET。两端采用相同方式打包比较体积才有意义；包大不等于运行时内存或 CPU 占用大。
 
 ## 数据与 AI Key
 
@@ -182,4 +207,4 @@ python ubuntu/build-deb.py --version 0.1.0 --lite
 
 可用 `dotnet build YijianTodo.sln -c Release` 编译两端；根目录 GitHub Actions 分别生成 Windows 与 Ubuntu 构建产物。诗库文本按二进制字节保存，避免 Git 换行转换破坏字节索引。
 
-当前已在 Windows 编译两个平台项目，并用隔离数据进行 Avalonia 无界面交互及本地模拟 AI 检查。此电脑 WSL 的虚拟化不可用，尚未在真实 Ubuntu 桌面验证窗口管理、托盘、密钥环和性能。开发测试材料保留在系统临时目录，不进入源码仓库。
+当前已在 Windows 编译两个平台项目，完成隔离数据下的 Avalonia 无界面交互、本地模拟 AI 检查及安装包完整性校验。实际安装、卸载，以及真实 Ubuntu 桌面的窗口管理、托盘、密钥环和性能仍待实机验证。
