@@ -1,0 +1,53 @@
+name: Build desktop apps
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version
+        default: '0.1.0'
+        required: true
+
+env:
+  YIJIAN_VERSION: ${{ inputs.version || '0.1.0' }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build Windows installers
+        shell: pwsh
+        run: |
+          ./windows/build-installer.ps1 -Version $env:YIJIAN_VERSION
+          ./windows/build-installer.ps1 -Version $env:YIJIAN_VERSION -Lite
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yijian-todo-windows-x64
+          path: releases/*.exe
+  ubuntu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build Ubuntu installers
+        run: |
+          python ubuntu/build-deb.py --version "$YIJIAN_VERSION"
+          python ubuntu/build-deb.py --version "$YIJIAN_VERSION" --lite
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yijian-todo-linux-x64
+          path: releases/*.deb

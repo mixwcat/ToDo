@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+/windows/一件Todo.exe
+/windows/Assets/
+/ubuntu/dist/
+/releases/
+.vs/
+*.user
+*.suo
+.DS_Store
+*.dpapi
+state.json*
+.env
+.env.*
+*.log

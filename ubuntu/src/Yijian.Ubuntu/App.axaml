@@ -1,0 +1,19 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:simple="clr-namespace:Avalonia.Themes.Simple;assembly=Avalonia.Themes.Simple"
+             x:Class="Yijian.Ubuntu.App">
+  <Application.Resources>
+    <SolidColorBrush x:Key="Bg">#fbfcf9</SolidColorBrush>
+    <SolidColorBrush x:Key="Card">#ffffff</SolidColorBrush>
+    <SolidColorBrush x:Key="Fg">#28382d</SolidColorBrush>
+    <SolidColorBrush x:Key="Muted">#8a978d</SolidColorBrush>
+    <SolidColorBrush x:Key="Line">#e5ebe3</SolidColorBrush>
+    <SolidColorBrush x:Key="Accent">#4f765c</SolidColorBrush>
+    <SolidColorBrush x:Key="Soft">#edf3e9</SolidColorBrush>
+    <SolidColorBrush x:Key="Danger">#ad645a</SolidColorBrush>
+  </Application.Resources>
+  <Application.Styles>
+    <simple:SimpleTheme />
+    <StyleInclude Source="avares://YijianTodo/Styles.axaml" />
+  </Application.Styles>
+</Application>

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8f5">
+  <title>一件 · Todo</title>
+  <style>
+    :root{color-scheme:light;--page:#e9ece6;--surface:#fbfcf9;--card:#fff;--ink:#26352d;--muted:#8a948c;--line:#e8ece5;--accent:#4f765c;--accent-soft:#edf3e9;--hover:#f2f5ee;--shadow:0 24px 90px #35422f15,0 2px 8px #35422f06}
+    *{box-sizing:border-box}button,input{font:inherit}button{color:inherit;cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button{border:0;background:none}svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--page);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;font-size:14px;padding:32px 16px;transition:background .2s}button,input{-webkit-tap-highlight-color:transparent}button:disabled{opacity:.45;cursor:default}.app{width:420px;height:770px;max-height:calc(100dvh - 64px);display:flex;flex-direction:column;background:var(--surface);border:1px solid #ffffff90;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;position:relative}.titlebar{height:57px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 17px 0 24px;border-bottom:1px solid var(--line);user-select:none}.brand{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;letter-spacing:2px}.brand-mark{width:20px;height:20px;display:grid;place-items:center;background:var(--accent);border-radius:6px;color:#fff}.brand-mark svg{width:13px;height:13px;stroke-width:2.2}.window-actions{display:flex;align-items:center;gap:3px}.icon-button{width:30px;height:30px;display:grid;place-items:center;border-radius:7px;color:var(--muted);transition:background .15s,color .15s}.icon-button:hover{background:var(--hover);color:var(--ink)}.icon-button svg{width:15px;height:15px}.icon-button.close:hover{background:#fae9e5;color:#b26051}.content{padding:31px 28px 0;min-height:0;flex:1;display:flex;flex-direction:column}.eyebrow{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px;letter-spacing:1px}.day{display:flex;align-items:center;gap:7px}.day svg{width:13px;height:13px}.edition{font-size:10px;letter-spacing:1.5px;color:#a2aaa2}h1{font-size:27px;font-weight:500;letter-spacing:1px;margin:18px 0 8px;line-height:1.5}.subtitle{margin:0;color:var(--muted);font-size:12px;letter-spacing:.4px}.overview{display:flex;align-items:center;justify-content:space-between;margin-top:31px;margin-bottom:13px}.section-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}.count{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:500}.progress-label{font-size:10px;color:var(--muted)}.progress-track{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:21px}.progress-fill{height:100%;background:#8ca583;border-radius:3px;transition:width .3s}.task-scroll{overflow:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:2px 2px 12px;margin:0 -2px}.task-list{list-style:none;padding:0;margin:0}.task-group{margin-bottom:10px}.task-row{min-height:64px;display:flex;align-items:center;gap:12px;padding:15px 13px 15px 15px;border:1px solid var(--line);border-radius:11px;background:var(--card);transition:border-color .15s,background .15s;position:relative}.task-row:hover{border-color:#cbd7c7}.task-row.menu-target{border-color:var(--accent);background:var(--accent-soft)}.check{width:18px;height:18px;flex:0 0 18px;border:1.4px solid #cbd4c7;border-radius:6px;display:grid;place-items:center;padding:0;color:#fff;transition:all .15s}.check:hover{border-color:var(--accent);background:var(--accent-soft)}.check svg{width:12px;height:12px;stroke-width:2.3;opacity:0}.task-text{line-height:1.6;font-size:13px;word-break:break-word;flex:1;min-width:0}.task-note{display:block;font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.3px}.task-menu-button{width:22px;height:26px;flex:0 0 22px;display:grid;place-items:center;color:#a3aca0;border-radius:5px;opacity:0}.task-menu-button:hover{background:var(--hover);color:var(--accent)}.task-menu-button svg{width:16px;height:16px}.task-row:hover .task-menu-button,.task-menu-button:focus-visible,.menu-target .task-menu-button{opacity:1}.task-row.completed .check{background:var(--accent);border-color:var(--accent)}.task-row.completed .check svg{opacity:1}.task-row.completed .task-title{color:#a1aaa0;text-decoration:line-through;text-decoration-color:#b7c0b4}.children{list-style:none;margin:0 0 0 24px;padding:5px 0 0 16px;border-left:1px solid #dbe3d6}.children .task-group{margin-bottom:0}.children .task-row{border:0;background:transparent;border-radius:7px;padding:10px 5px;min-height:43px;gap:10px}.children .task-row:hover{background:var(--hover)}.children .task-text{font-size:12px}.children .check{width:15px;height:15px;flex-basis:15px;border-radius:5px}.children .children{margin-left:7px}.add-button{width:100%;min-height:49px;border:1px dashed #ccd7c6;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:9px;color:var(--accent);font-size:12px;background:transparent;transition:all .15s;margin-top:8px}.add-button:hover{background:var(--accent-soft);border-color:var(--accent)}.add-button svg{width:16px;height:16px}.composer{padding:12px;background:var(--card);border:1px solid var(--accent);border-radius:10px;margin:8px 0;box-shadow:0 3px 12px #344d3310}.composer-label{font-size:10px;color:var(--muted);margin-bottom:7px}.composer input{border:0;background:transparent;color:var(--ink);width:100%;padding:3px 0 9px;font-size:13px;outline:none}.composer input:focus-visible{outline:none}.composer input::placeholder{color:#a7afa3}.composer-controls{display:flex;justify-content:flex-end;align-items:center;gap:6px}.text-button{font-size:11px;padding:6px 10px;border-radius:6px;color:var(--muted)}.text-button:hover{background:var(--hover)}.primary-button{font-size:11px;background:var(--accent);color:#fff;padding:7px 13px;border-radius:6px}.primary-button:hover{filter:brightness(1.1)}.empty{padding:30px 10px;text-align:center;color:var(--muted);font-size:12px;line-height:2}.empty svg{margin:0 auto 10px;width:28px;height:28px;color:#a4b89c}.footer{padding:19px 28px 21px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;color:#a0a99b;font-size:10px;letter-spacing:.3px;border-top:1px solid var(--line);margin-top:15px}.footer-hint{display:flex;align-items:center;gap:6px}.footer svg{width:12px;height:12px}.footer-dot{width:5px;height:5px;border-radius:50%;background:#a1b696;margin-right:5px;display:inline-block}.context-menu{position:fixed;z-index:30;width:203px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 35px #1e332922}.context-menu button{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:11px 9px;border-radius:6px;font-size:12px}.context-menu button:hover,.context-menu button:focus-visible{background:var(--accent-soft);color:var(--accent);outline:none}.context-menu svg{width:15px;height:15px}.menu-divider{height:1px;background:var(--line);margin:2px 5px}.settings{position:absolute;z-index:20;right:15px;top:51px;width:244px;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:18px;box-shadow:0 8px 30px #1e332915}.settings-heading{font-size:13px;font-weight:600;margin:0 0 15px}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;margin-top:17px}.switch{width:30px;height:18px;border-radius:20px;background:#d9dfd4;padding:3px;transition:background .15s}.switch:after{content:"";width:12px;height:12px;border-radius:50%;display:block;background:#fff;box-shadow:0 1px 3px #0001;transition:transform .15s}.switch[aria-checked=true]{background:var(--accent)}.switch[aria-checked=true]:after{transform:translateX(12px)}.settings-foot{color:var(--muted);font-size:10px;margin:19px 0 0;padding-top:12px;border-top:1px solid var(--line)}[hidden]{display:none!important}.toast{position:absolute;bottom:69px;left:50%;transform:translateX(-50%);z-index:40;max-width:90%;white-space:nowrap;background:var(--ink);color:var(--surface);border-radius:8px;padding:10px 15px;font-size:11px;box-shadow:0 4px 16px #0001}.mini-bar{width:300px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);padding:15px 17px;display:flex;align-items:center;justify-content:space-between}.mini-bar button{font-size:12px;color:var(--accent);padding:5px 9px}.closed-state{text-align:center;color:var(--muted);font-size:13px;line-height:2}.closed-state button{display:block;margin:16px auto;padding:10px 22px;border-radius:8px;background:var(--accent);color:white;font-size:12px}.compact .task-row{min-height:49px;padding-top:10px;padding-bottom:10px}.compact .task-group{margin-bottom:7px}.compact .children .task-row{min-height:35px;padding-top:7px;padding-bottom:7px}.dark{color-scheme:dark;--page:#1d241f;--surface:#262e28;--card:#2c352e;--ink:#e0e7dc;--muted:#95a38f;--line:#3b463b;--accent:#8eaf80;--accent-soft:#354432;--hover:#343f34;--shadow:0 24px 90px #0003}.dark .app{border-color:#414c3d}.dark .primary-button{color:#1d291a}.dark .check{color:#21301e}.dark .children{border-color:#45503f}.dark .task-row:hover{border-color:#62735b}.dark .task-row.completed .task-title{color:#788772}.dark .switch[aria-checked=true]{background:#638451}@media(max-width:480px){body{padding:0;background:var(--surface)}.app{width:100%;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}.content{padding-left:24px;padding-right:24px}.task-menu-button{opacity:1}.footer{padding-left:24px;padding-right:24px}}@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+    .overview-left{display:flex;align-items:center;gap:12px}.completed-filter{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap}.completed-filter input{width:12px;height:12px;margin:0;accent-color:var(--accent);cursor:pointer}.drag-handle{width:14px;height:26px;padding:0;flex:0 0 14px;display:grid;place-items:center;color:#b2bcae;cursor:grab;touch-action:none;border-radius:4px;margin-left:-5px;margin-right:-5px}.drag-handle svg{width:13px;height:17px;stroke-width:2.3}.drag-handle:hover,.drag-handle:focus-visible{color:var(--accent);background:var(--accent-soft)}.task-group{position:relative}.task-group.is-dragging{opacity:.35}.task-group.drop-before:before,.task-group.drop-after:after{content:"";position:absolute;left:0;right:0;height:2px;background:var(--accent);border-radius:2px;z-index:2;pointer-events:none}.task-group.drop-before:before{top:-5px}.task-group.drop-after:after{bottom:-5px}.sorting,.sorting *{cursor:grabbing!important;user-select:none!important}.task-row{gap:10px}.children .task-row{gap:9px}.progress-track{flex-shrink:0}.add-button,#composer-slot{flex-shrink:0}.footer-hint{font-size:9px}@media(max-width:360px){.overview-left{gap:8px}.content{padding-left:18px;padding-right:18px}.progress-label{font-size:9px}}
+    h1.poem{font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;font-size:24px;font-weight:400;line-height:1.7;letter-spacing:1px;margin:20px 0 0;min-height:82px;overflow-wrap:anywhere;flex-shrink:0}h1.poem .poem-line{display:block}.overview{margin-top:24px;flex-shrink:0}.eyebrow{flex-shrink:0}@media(max-width:360px){h1.poem{font-size:22px}}
+    textarea{font:inherit;color:inherit}button svg{pointer-events:none}.workspace{width:420px;max-width:100%;height:770px;max-height:calc(100dvh - 64px);display:flex;position:relative;border-radius:18px;box-shadow:var(--shadow);transition:width .22s ease}.workspace .app{height:100%;max-height:none;flex:0 0 420px;box-shadow:none}.workspace.chat-open{width:850px}.workspace.chat-open .app{border-top-right-radius:0;border-bottom-right-radius:0}.ai-launch{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:7px;background:var(--accent-soft);color:var(--accent);font-size:11px;letter-spacing:0}.ai-launch:hover{filter:brightness(.96)}.ai-launch svg{width:14px;height:14px}.task-row.has-children{cursor:pointer}.disclosure{width:22px;height:26px;flex:0 0 22px;padding:0;color:var(--muted);display:grid;place-items:center;border-radius:5px}.disclosure:hover{background:var(--accent-soft);color:var(--accent)}.disclosure svg{width:10px;height:10px;fill:currentColor;stroke:none;transition:transform .15s}.disclosure[aria-expanded=false] svg{transform:rotate(-90deg)}.settings{width:314px;max-width:calc(100% - 30px);max-height:calc(100% - 70px);overflow:auto;scrollbar-width:thin}.config-form{margin-top:19px;border-top:1px solid var(--line);padding-top:16px}.config-form h2{font-size:12px;font-weight:600;margin:0 0 13px}.config-label{display:block;color:var(--muted);font-size:10px;margin:12px 0 6px}.config-input{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 10px;border-radius:7px;font-size:11px;min-width:0}.key-field{display:flex;gap:5px}.key-field .icon-button{flex:0 0 30px;height:34px}.config-hint{font-size:10px;line-height:1.7;color:var(--muted);margin:10px 0}.remember-key{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin:12px 0}.remember-key input{accent-color:var(--accent);margin:0}.config-actions{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:12px}.config-status{font-size:10px;color:var(--accent);line-height:1.6}.ai-panel{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-left:0;border-radius:0 18px 18px 0;overflow:hidden}.ai-header{height:57px;flex-shrink:0;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.ai-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.ai-title svg{width:17px;height:17px;color:var(--accent)}.ai-header-actions{display:flex;gap:2px}.chat-log{flex:1;min-height:0;overflow:auto;padding:23px 20px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}.chat-welcome{margin:24px 0 29px}.welcome-icon{width:38px;height:38px;background:var(--accent-soft);border-radius:12px;display:grid;place-items:center;color:var(--accent);margin-bottom:17px}.chat-welcome h2{font-size:20px;font-weight:500;letter-spacing:.5px;margin:0 0 12px}.chat-welcome p{font-size:12px;color:var(--muted);line-height:1.9;margin:0}.suggestion{display:block;border:1px solid var(--line);background:var(--card);padding:11px 12px;border-radius:9px;margin-top:10px;text-align:left;font-size:11px;width:100%;color:var(--ink)}.suggestion:hover{border-color:var(--accent);background:var(--accent-soft)}.chat-message{margin-bottom:17px;font-size:12px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere}.chat-message.user{background:var(--accent-soft);border-radius:11px 11px 3px 11px;padding:11px 13px;margin-left:35px}.chat-message.assistant{background:var(--card);border:1px solid var(--line);border-radius:3px 11px 11px 11px;padding:12px 13px;margin-right:12px}.chat-message.error{color:#af6450;background:var(--card);border:1px solid #bc7d5a40;padding:10px 12px;border-radius:8px}.chat-message.operation{font-size:10px;color:var(--accent);border-left:2px solid var(--accent);padding:4px 10px;margin-left:3px}.chat-message.system{font-size:10px;color:var(--muted)}.chat-message.pending{color:var(--muted)}.undo-card{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;font-size:10px;color:var(--accent);background:var(--accent-soft);border-radius:8px;margin-bottom:15px;gap:10px}.undo-card button{font-size:10px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}.chat-compose{padding:14px 18px 17px;border-top:1px solid var(--line);flex-shrink:0}.chat-input-box{border:1px solid var(--line);border-radius:11px;background:var(--card);padding:10px}.chat-input-box:focus-within{border-color:var(--accent)}.chat-input-box textarea{width:100%;resize:none;border:0;background:transparent;outline:none;font-size:12px;line-height:1.7;padding:1px 2px;min-height:52px;max-height:130px;display:block}.chat-input-box textarea:focus-visible{outline:none}.chat-input-controls{display:flex;align-items:center;justify-content:space-between;padding-top:7px}.chat-input-controls small{font-size:9px;color:var(--muted)}.chat-send{display:flex;align-items:center;gap:5px}.chat-send svg{width:12px;height:12px}.chat-caption{font-size:9px;color:var(--muted);margin:9px 1px 0;line-height:1.6}.ai-stop{font-size:11px;padding:7px 12px;border-radius:6px;background:var(--accent-soft);color:var(--accent)}@media(max-width:760px){.workspace.chat-open{width:420px}.workspace.chat-open .app{display:none}.ai-panel{border-left:1px solid var(--line);border-radius:18px}.workspace .app{flex-basis:100%;width:100%}}@media(max-width:480px){.workspace{height:100dvh;max-height:none;width:100%;border-radius:0;box-shadow:none}.workspace.chat-open{width:100%}.ai-panel{border:0;border-radius:0}.workspace .app{border-radius:0}.chat-log{padding:18px 20px}.chat-welcome{margin-top:10px}}@media(prefers-reduced-motion:reduce){.workspace{transition:none}}
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-.6 2.1-2 .9-2-.5-2 3.5 1.5 1.6v2.8L2.4 15l2 3.5 2-.5 2 .9L9 21h4l.6-2.1 2-.9 2 .5 2-3.5-1.5-1.6v-2.8L19.6 9l-2-3.5-2 .5-2-.9L13 3Z"/><circle cx="11" cy="12" r="3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r=".7"/><circle cx="12" cy="12" r=".7"/><circle cx="19" cy="12" r=".7"/></symbol>
+    <symbol id="i-child" viewBox="0 0 24 24"><path d="M6 4v9a3 3 0 0 0 3 3h11m-4-4 4 4-4 4"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7m-6 0h12"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 4C5 1 1 13 8 18s14-3 12-14ZM6 21 16 9"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="14" rx="2"/><path d="M9 3h10a3 3 0 0 1 3 3v10"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 18 24"><path d="M6 5h.1M12 5h.1M6 12h.1M12 12h.1M6 19h.1M12 19h.1"/></symbol>
+    <symbol id="i-triangle" viewBox="0 0 12 12"><path d="m1 3 5 6 5-6Z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 2 1.5-5A8 8 0 0 1 12 3.5a8 8 0 0 1 8 8Z"/><path d="m12 7 .9 2.6 2.6.9-2.6.9L12 14l-.9-2.6-2.6-.9 2.6-.9Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m21 3-7 18-4-7-7-4 18-7ZM10 14 21 3"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  </defs></svg>
+  <div class="workspace" id="workspace">
+  <main class="app" id="app" aria-label="一件待办清单">
+    <header class="titlebar">
+      <div class="brand"><span class="brand-mark"><svg><use href="#i-check"/></svg></span>一件 <span style="color:var(--muted);font-size:10px;font-weight:400;letter-spacing:1.5px;margin-left:3px">TODO</span></div>
+      <div class="window-actions">
+        <button class="icon-button" id="settings-button" aria-label="设置" title="设置" aria-expanded="false" aria-controls="settings"><svg><use href="#i-settings"/></svg></button>
+        <button class="icon-button" id="minimize-button" aria-label="最小化" title="最小化（原型演示）"><svg><use href="#i-minus"/></svg></button>
+        <button class="icon-button close" id="close-button" aria-label="关闭" title="关闭（原型演示）"><svg><use href="#i-close"/></svg></button>
+      </div>
+    </header>
+    <section class="content">
+      <div class="eyebrow"><span class="day"><svg><use href="#i-calendar"/></svg><span id="date"></span></span><button class="ai-launch" id="ai-launch" aria-expanded="false" aria-controls="ai-panel"><svg><use href="#i-chat"/></svg>与 AI 对话</button></div>
+      <h1 class="poem" id="poem" aria-live="polite">正在读诗…</h1>
+      <div class="overview"><div class="overview-left"><span class="section-name">我的任务 <span class="count" id="task-count">0</span></span><label class="completed-filter"><input type="checkbox" id="show-completed" checked><span>显示已完成</span></label></div><span class="progress-label" id="progress-label"></span></div>
+      <div class="progress-track" role="progressbar" aria-label="任务完成进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="task-scroll" id="task-scroll"><ul class="task-list" id="task-list" aria-label="任务列表"></ul></div><div id="composer-slot"></div><button class="add-button" id="add-button"><svg><use href="#i-plus"/></svg>添加一件事</button>
+    </section>
+    <footer class="footer"><span class="footer-hint"><svg><use href="#i-mouse"/></svg>拖动左侧手柄排序 · 右键更多操作</span><span id="save-status"><i class="footer-dot"></i>已保存到本机</span></footer>
+    <aside class="settings" id="settings" aria-label="设置" hidden>
+      <p class="settings-heading">让清单更合你意</p>
+      <div class="setting-row"><span id="label-compact">紧凑布局</span><button class="switch" role="switch" aria-checked="false" aria-labelledby="label-compact" data-setting="compact"></button></div>
+      <div class="setting-row"><span id="label-dark">深色外观</span><button class="switch" role="switch" aria-checked="false" aria-labelledby="label-dark" data-setting="dark"></button></div>
+      <form class="config-form" id="ai-config-form">
+        <h2>AI 连接</h2>
+        <label class="config-label" for="ai-url">API URL</label><input class="config-input" id="ai-url" type="url" placeholder="https://api.example.com/v1" autocomplete="off" required>
+        <label class="config-label" for="ai-model">模型名称</label><input class="config-input" id="ai-model" placeholder="填写服务提供的模型名称" autocomplete="off" required maxlength="150">
+        <label class="config-label" for="ai-key">API Key</label><div class="key-field"><input class="config-input" id="ai-key" type="password" placeholder="本地无鉴权服务可留空" autocomplete="off"><button class="icon-button" type="button" id="toggle-key" aria-label="显示 Key" aria-pressed="false"><svg><use href="#i-eye"/></svg></button></div>
+        <label class="remember-key"><input type="checkbox" id="remember-key">在本机记住 Key</label>
+        <p class="config-hint">支持兼容 Chat Completions 且可调用工具的接口。可填写基础地址或完整接口地址；Key 默认只保留在本次会话。</p>
+        <span class="config-status" id="config-status" role="status"></span><div class="config-actions"><button class="text-button" id="clear-ai-config" type="button">清除 AI 配置</button><button class="primary-button" type="submit">保存 AI 设置</button></div>
+      </form>
+      <p class="settings-foot">任务和偏好会自动保存在当前浏览器。</p>
+    </aside>
+    <div class="toast" id="toast" role="status" hidden></div>
+  </main>
+  <aside class="ai-panel" id="ai-panel" aria-label="AI 对话" hidden>
+    <header class="ai-header"><span class="ai-title"><svg><use href="#i-chat"/></svg>任务助手</span><div class="ai-header-actions"><button class="icon-button" id="new-chat" aria-label="新对话" title="新对话"><svg><use href="#i-plus"/></svg></button><button class="icon-button" id="ai-settings" aria-label="AI 设置" title="AI 设置"><svg><use href="#i-settings"/></svg></button><button class="icon-button" id="close-chat" aria-label="收起 AI 对话" title="收起对话"><svg><use href="#i-close"/></svg></button></div></header>
+    <div class="chat-log" id="chat-log" role="log" aria-label="对话记录" aria-live="polite"><div class="chat-welcome" id="chat-welcome"><div class="welcome-icon"><svg><use href="#i-chat"/></svg></div><h2>把想做的事，聊清楚。</h2><p>我可以陪你梳理想法，把大任务拆成容易开始的小步骤，也能直接调整清单。</p><button class="suggestion" data-suggestion="帮我看看现在的任务，哪些可以拆成更容易开始的小步骤？先给我建议。">看看哪些任务可以拆小一点</button><button class="suggestion" data-suggestion="先和我聊聊，帮我明确今天最想完成的一件事，暂时不用修改清单。">聊聊今天最重要的一件事</button></div></div>
+    <form class="chat-compose" id="chat-form"><div class="chat-input-box"><textarea id="chat-input" rows="2" maxlength="10000" aria-label="发送给 AI 的消息" placeholder="说说你的想法，或让 AI 帮你拆分任务…"></textarea><div class="chat-input-controls"><small>Enter 发送 · Shift + Enter 换行</small><button class="ai-stop" id="ai-stop" type="button" hidden>停止回复</button><button class="primary-button chat-send" id="chat-send" type="submit">发送<svg><use href="#i-send"/></svg></button></div></div><p class="chat-caption" id="chat-caption">先在设置中连接你的 AI 服务。</p></form>
+  </aside>
+  </div>
+  <div class="mini-bar" id="mini-bar" hidden><span class="brand"><span class="brand-mark"><svg><use href="#i-check"/></svg></span>一件</span><button id="restore-button" title="恢复窗口" aria-label="恢复窗口"><svg><use href="#i-restore"/></svg></button></div>
+  <div class="closed-state" id="closed-state" hidden>清单已收好，下次继续。<button id="reopen-button">重新打开一件</button></div>
+  <div class="context-menu" id="context-menu" role="menu" aria-label="任务操作" hidden><button role="menuitem" id="create-child"><svg><use href="#i-child"/></svg>创建子任务</button><div class="menu-divider" role="separator"></div><button role="menuitem" id="complete-task"><svg><use href="#i-check"/></svg><span>标记任务为已完成</span></button></div>
+  <script src="task-api.js"></script>
+  <script src="ai-client.js"></script>
+  <script>
+    const $ = selector => document.querySelector(selector);
+    const storageKey = 'yijian-todo-prototype-v1';
+    let state = { tasks: [
+      {id:'sample-1',title:'把今天的想法整理下来',done:false,parentId:null},
+      {id:'sample-2',title:'完成 Todo 工具的第一个原型',done:false,parentId:null},
+      {id:'sample-3',title:'梳理主要界面与交互',done:true,parentId:'sample-2'},
+      {id:'sample-4',title:'试试右键，创建一个子任务',done:false,parentId:'sample-2'},
+      {id:'sample-5',title:'读几页一直想看的书',done:false,parentId:null},
+      {id:'sample-6',title:'出门走走，给自己充充电',done:true,parentId:null}
+    ], settings:{showCompleted:true,compact:false,dark:false} };
+    let canSave = true;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+      if (saved && Array.isArray(saved.tasks) && saved.tasks.every(t => typeof t.id === 'string' && typeof t.title === 'string' && typeof t.done === 'boolean' && (t.parentId === null || typeof t.parentId === 'string')) && new Set(saved.tasks.map(t=>t.id)).size === saved.tasks.length) {
+        const ids = new Set(saved.tasks.map(t=>t.id));
+        const validTree = saved.tasks.every(t => {
+          const seen = new Set([t.id]); let parent = t.parentId;
+          while(parent !== null) { if(!ids.has(parent) || seen.has(parent)) return false; seen.add(parent); parent=saved.tasks.find(item=>item.id===parent).parentId; }
+          return true;
+        });
+        if(validTree) state = {tasks:saved.tasks,settings:{...state.settings,...saved.settings}};
+      }
+    } catch { canSave = false; }
+    const taskStore=new TodoTasks.TaskStore(state.tasks);
+    state.tasks=taskStore.list();
+    // Portable operation boundary: a desktop host can expose the same calls through IPC.
+    window.todoAPI=Object.freeze({version:TodoTasks.version,listTasks:()=>taskStore.snapshot(),execute:(name,args)=>taskStore.execute(name,args,'api'),subscribe:listener=>taskStore.subscribe(listener)});
+    const icons = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    let activeTaskId = null, menuOrigin = null, composerParentId = null, composerOpen = false, composerDraft = '', toastTimer;
+    let dragState = null, dragFrame = null;
+    let poemRequest = 0;
+    let activeAiTurn=null;
+    taskStore.subscribe(event=>{if(dragState)finishDrag();state.tasks=taskStore.list();if(activeAiTurn&&event.source!=='ai')activeAiTurn.externalChanges=true;closeMenu();persist();render();document.querySelectorAll('[data-undo-revision]').forEach(button=>{button.disabled=Number(button.dataset.undoRevision)!==taskStore.revision;});});
+    async function loadPoem() {
+      const request=++poemRequest,heading=$('#poem'),controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
+      try {
+        const response=await fetch('poem-lines.txt',{cache:'no-cache',signal:controller.signal});
+        if(!response.ok)throw new Error('诗词文件读取失败');
+        const couplet=/^(?:\p{Script=Han}{5}，\p{Script=Han}{5}|\p{Script=Han}{7}，\p{Script=Han}{7})[。！？]$/u;
+        const choices=(await response.text()).split(/\r?\n/).map(line=>line.trim()).filter(line=>couplet.test(line));
+        if(!choices.length)throw new Error('诗词文件为空');
+        if(request!==poemRequest)return;
+        let previous='';try{previous=localStorage.getItem('yijian-last-poem')||'';}catch{}
+        const random=globalThis.crypto?.getRandomValues?crypto.getRandomValues(new Uint32Array(1))[0]/4294967296:Math.random();
+        let index=Math.floor(random*choices.length);
+        if(choices.length>1&&choices[index]===previous)index=(index+1)%choices.length;
+        const quote=choices[index];heading.replaceChildren();
+        const clauses=quote.slice(0,-1).split('，');
+        if(clauses.length===2){
+          clauses.forEach((line,i)=>{const span=document.createElement('span');span.className='poem-line';span.textContent=line+(i===0?'，':quote.slice(-1));heading.append(span);});
+        }else heading.textContent=quote;
+        heading.removeAttribute('title');
+        try{localStorage.setItem('yijian-last-poem',quote);}catch{}
+      }catch(error){if(request===poemRequest){heading.textContent='诗词暂未加载';heading.title='请通过本地服务打开页面，并确认 poem-lines.txt 与页面放在同一目录。';}}
+      finally{clearTimeout(timeout);}
+    }
+    function orderedSiblings(parentId) {
+      return state.tasks.filter(task=>task.parentId===parentId).sort((a,b)=>Number(a.done)-Number(b.done)||(a.done?b.completedAt-a.completedAt:0));
+    }
+    function persist() {
+      try { localStorage.setItem(storageKey, JSON.stringify(state)); canSave=true; }
+      catch { canSave=false; }
+      $('#save-status').textContent='';
+      const dot=document.createElement('i'); dot.className='footer-dot';
+      $('#save-status').append(dot, canSave ? '已保存到本机' : '本次会话内保存');
+    }
+    function render() {
+      document.body.classList.toggle('dark',state.settings.dark);
+      $('#app').classList.toggle('compact',state.settings.compact);
+      $('#show-completed').checked=state.settings.showCompleted;
+      document.querySelectorAll('[data-setting]').forEach(button => button.setAttribute('aria-checked',String(!!state.settings[button.dataset.setting])));
+      const total = state.tasks.length, done = state.tasks.filter(task=>task.done).length;
+      $('#task-count').textContent = state.tasks.filter(task=>!task.done).length;
+      $('#progress-label').textContent = total ? `已完成 ${done} / ${total}` : '慢慢来，从一件事开始';
+      const percent=total ? Math.round(done/total*100) : 0;
+      $('#progress-fill').style.width=percent+'%'; $('#progress').setAttribute('aria-valuenow',percent);
+      const list = $('#task-list'); list.replaceChildren();
+      function addItems(parentId, container) {
+        let visible=0;
+        orderedSiblings(parentId).forEach(task=>{
+          const children=document.createElement('ul'); children.className='children';
+          children.id='children-'+task.id;children.hidden=task.collapsed;
+          const visibleChildren=addItems(task.id,children);
+          const subtasks=state.tasks.filter(item=>item.parentId===task.id);
+          if(!state.settings.showCompleted && task.done && !visibleChildren) return;
+          const group=document.createElement('li'); group.className='task-group';
+          const row=document.createElement('div'); row.className='task-row'+(task.done?' completed':'')+(subtasks.length?' has-children':''); row.dataset.id=task.id;
+          row.tabIndex=0; row.setAttribute('aria-label',task.title+'，'+(task.done?'已完成':'未完成')+'，右键展开操作');
+          const handle=document.createElement('button');handle.className='drag-handle';handle.type='button';handle.innerHTML=icons('grip');handle.setAttribute('aria-label','拖动排序：'+task.title);handle.disabled=task.done;handle.title=task.done?'已完成任务按完成时间倒序排列':'拖动调整同级未完成任务顺序；也可按 Alt + ↑ / ↓';
+          handle.addEventListener('pointerdown',e=>startDrag(e,task.id,handle,group));
+          handle.addEventListener('keydown',e=>{if(e.altKey&&['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();const siblings=orderedSiblings(task.parentId).filter(t=>t.done===task.done);const index=siblings.findIndex(t=>t.id===task.id);const target=siblings[index+(e.key==='ArrowUp'?-1:1)];if(target)moveTask(task.id,target.id,e.key==='ArrowDown');}});
+          const check=document.createElement('button'); check.className='check'; check.type='button'; check.innerHTML=icons('check'); check.setAttribute('aria-label',(task.done?'标记为未完成：':'标记为已完成：')+task.title); check.setAttribute('aria-pressed',String(task.done));
+          check.addEventListener('click',()=>toggleDone(task.id));
+          const text=document.createElement('div'); text.className='task-text';
+          const title=document.createElement('span'); title.className='task-title'; title.textContent=task.title; text.append(title);
+          if(subtasks.length) {const note=document.createElement('span'); note.className='task-note';note.textContent=`${subtasks.filter(t=>t.done).length} / ${subtasks.length} 个子任务已完成`; text.append(note);}
+          const more=document.createElement('button'); more.className='task-menu-button'; more.type='button'; more.innerHTML=icons('more'); more.setAttribute('aria-label','更多操作：'+task.title); more.setAttribute('aria-haspopup','menu');
+          more.addEventListener('click',e=>{e.stopPropagation();const rect=more.getBoundingClientRect();openMenu(task.id,rect.right,rect.bottom,more);});
+          row.addEventListener('contextmenu',e=>{e.preventDefault();openMenu(task.id,e.clientX,e.clientY,row);});
+          row.addEventListener('keydown',e=>{if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')) {e.preventDefault();const rect=row.getBoundingClientRect();openMenu(task.id,rect.left+35,rect.bottom-10,row);}});
+          row.append(handle,check,text);
+          if(subtasks.length){
+            const disclosure=document.createElement('button');disclosure.className='disclosure';disclosure.innerHTML=icons('triangle');disclosure.setAttribute('aria-label',(task.collapsed?'展开':'收起')+'子任务：'+task.title);disclosure.setAttribute('aria-expanded',String(!task.collapsed));disclosure.setAttribute('aria-controls',children.id);
+            disclosure.addEventListener('click',()=>toggleCollapsed(task.id,true));row.append(disclosure);
+            row.addEventListener('click',e=>{if(!e.target.closest('button,input,a'))toggleCollapsed(task.id);});
+            row.addEventListener('keydown',e=>{if(e.target===row&&['Enter',' '].includes(e.key)){e.preventDefault();toggleCollapsed(task.id);}});
+          }
+          row.append(more); group.append(row); if(visibleChildren) group.append(children);container.append(group);visible++;
+        });return visible;
+      }
+      if(!addItems(null,list)) { const empty=document.createElement('li'); empty.className='empty'; empty.innerHTML=icons('leaf'); empty.append(document.createTextNode(total?'都完成了，给自己一点空闲。':'清单空空，心里轻轻。'));list.append(empty); }
+    }
+    function showToast(message) {clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,2200);}
+    function toggleCollapsed(id,fromButton=false){const task=state.tasks.find(t=>t.id===id);if(!task)return;taskStore.collapse(id,!task.collapsed);const row=[...document.querySelectorAll('.task-row')].find(el=>el.dataset.id===id);(fromButton?row?.querySelector('.disclosure'):row)?.focus({preventScroll:true});}
+    function toggleDone(id) { const task=state.tasks.find(t=>t.id===id); if(!task)return;taskStore.complete(id,!task.done); const row=[...document.querySelectorAll('.task-row')].find(el=>el.dataset.id===id); if(row)row.querySelector('.check').focus({preventScroll:true}); }
+    function moveTask(id,targetId,after) {
+      const source=state.tasks.find(t=>t.id===id),target=state.tasks.find(t=>t.id===targetId);
+      if(!source||!target||id===targetId||source.parentId!==target.parentId||source.done||target.done)return false;
+      taskStore.move(id,targetId,after);
+      const handle=[...document.querySelectorAll('.task-row')].find(row=>row.dataset.id===id)?.querySelector('.drag-handle');handle?.focus({preventScroll:true});
+      showToast('任务顺序已保存');return true;
+    }
+    function clearDropIndicator(){document.querySelectorAll('.drop-before,.drop-after').forEach(el=>el.classList.remove('drop-before','drop-after'));}
+    function updateDropTarget() {
+      if(!dragState?.active)return;
+      clearDropIndicator();dragState.targetId=null;
+      const {x,y,id,parentId}=dragState,scroll=$('#task-scroll'),bounds=scroll.getBoundingClientRect();
+      if(x<bounds.left||x>bounds.right||y<bounds.top||y>bounds.bottom)return;
+      let group=document.elementFromPoint(x,y)?.closest('.task-group');
+      while(group){const row=group.querySelector(':scope > .task-row');const task=state.tasks.find(t=>t.id===row?.dataset.id);if(task?.parentId===parentId)break;group=group.parentElement?.closest('.task-group');}
+      if(!group){const source=dragState.group;const siblings=[...source.parentElement.children].filter(el=>el.classList.contains('task-group'));group=siblings.find(el=>y<el.getBoundingClientRect().top+el.getBoundingClientRect().height/2)||siblings.at(-1);}
+      const row=group?.querySelector(':scope > .task-row');if(!row||row.dataset.id===id)return;
+      const source=state.tasks.find(t=>t.id===id),target=state.tasks.find(t=>t.id===row.dataset.id);if(!target||source.done!==target.done)return;
+      const rect=row.getBoundingClientRect();dragState.targetId=row.dataset.id;dragState.after=y>rect.top+rect.height/2;
+      group.classList.add(dragState.after?'drop-after':'drop-before');
+    }
+    function dragAutoScroll() {
+      if(!dragState?.active)return;
+      const scroll=$('#task-scroll'),rect=scroll.getBoundingClientRect(),{x,y}=dragState;
+      if(x>=rect.left&&x<=rect.right&&y>=rect.top-24&&y<=rect.bottom+24){const edge=Math.min(35,rect.height/4);const speed=y<rect.top+edge?-Math.ceil((rect.top+edge-y)/4):y>rect.bottom-edge?Math.ceil((y-rect.bottom+edge)/4):0;if(speed){scroll.scrollTop+=Math.max(-14,Math.min(14,speed));updateDropTarget();}}
+      dragFrame=requestAnimationFrame(dragAutoScroll);
+    }
+    function startDrag(event,id,handle,group) {
+      if(event.button!==0||dragState)return;
+      const task=state.tasks.find(t=>t.id===id);if(!task||task.done)return;closeMenu();closeSettings();
+      dragState={id,parentId:task.parentId,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,active:false,handle,group,targetId:null,after:false};
+      handle.setPointerCapture(event.pointerId);
+    }
+    function finishDrag(commit=false) {
+      if(!dragState)return;const previous=dragState;dragState=null;cancelAnimationFrame(dragFrame);dragFrame=null;
+      clearDropIndicator();previous.group.classList.remove('is-dragging');document.body.classList.remove('sorting');
+      if(previous.handle.hasPointerCapture(previous.pointerId))previous.handle.releasePointerCapture(previous.pointerId);
+      if(commit&&previous.active&&previous.targetId)moveTask(previous.id,previous.targetId,previous.after);
+    }
+    document.addEventListener('pointermove',e=>{
+      if(!dragState||e.pointerId!==dragState.pointerId)return;
+      dragState.x=e.clientX;dragState.y=e.clientY;
+      if(!dragState.active&&Math.hypot(e.clientX-dragState.startX,e.clientY-dragState.startY)>5){dragState.active=true;dragState.group.classList.add('is-dragging');document.body.classList.add('sorting');dragAutoScroll();}
+      if(dragState.active){e.preventDefault();updateDropTarget();}
+    },{passive:false});
+    document.addEventListener('pointerup',e=>{if(dragState?.pointerId===e.pointerId)finishDrag(true);});
+    document.addEventListener('pointercancel',()=>finishDrag());
+    window.addEventListener('blur',()=>finishDrag());
+    function closeMenu(restoreFocus=false) {$('#context-menu').hidden=true;document.querySelector('.menu-target')?.classList.remove('menu-target');if(restoreFocus&&menuOrigin?.isConnected)menuOrigin.focus();activeTaskId=null;}
+    function openMenu(id,x,y,origin) {
+      closeMenu();closeSettings();activeTaskId=id;menuOrigin=origin;
+      const task=state.tasks.find(t=>t.id===id);if(!task)return;
+      origin.closest('.task-row')?.classList.add('menu-target');
+      $('#complete-task span').textContent=task.done?'标记任务为未完成':'标记任务为已完成';
+      const menu=$('#context-menu');menu.hidden=false;
+      menu.style.left=Math.max(8,Math.min(x,innerWidth-menu.offsetWidth-8))+'px';menu.style.top=Math.max(8,Math.min(y,innerHeight-menu.offsetHeight-8))+'px';
+      $('#create-child').focus({preventScroll:true});
+    }
+    function closeSettings() {$('#settings').hidden=true;$('#settings-button').setAttribute('aria-expanded','false');$('#ai-key').type='password';$('#toggle-key').setAttribute('aria-label','显示 Key');$('#toggle-key').setAttribute('aria-pressed','false');}
+    function closeComposer() {composerOpen=false;composerDraft='';composerParentId=null;$('#composer-slot').replaceChildren();$('#add-button').hidden=false;}
+    function openComposer(parentId=null) {
+      closeMenu();closeSettings();
+      if(composerOpen)composerDraft=$('#task-input').value;
+      composerParentId=parentId;composerOpen=true;
+      const slot=$('#composer-slot');slot.replaceChildren();
+      const form=document.createElement('form');form.className='composer';
+      const label=document.createElement('div');label.className='composer-label';label.id='composer-label';
+      const parent=state.tasks.find(t=>t.id===parentId);label.textContent=parent?'为「'+parent.title+'」创建子任务':'新的一件事';
+      const input=document.createElement('input');input.id='task-input';input.placeholder=parent?'写下一个小步骤…':'想做些什么？';input.autocomplete='off';input.maxLength=200;input.setAttribute('aria-labelledby','composer-label');input.value=composerDraft;
+      const controls=document.createElement('div');controls.className='composer-controls';
+      const cancel=document.createElement('button');cancel.type='button';cancel.className='text-button';cancel.textContent='取消';cancel.addEventListener('click',()=>{closeComposer();$('#add-button').focus();});
+      const submit=document.createElement('button');submit.type='submit';submit.className='primary-button';submit.textContent='添加';submit.disabled=!input.value.trim();input.addEventListener('input',()=>submit.disabled=!input.value.trim());
+      controls.append(cancel,submit);form.append(label,input,controls);slot.append(form);$('#add-button').hidden=true;
+      form.addEventListener('submit',e=>{e.preventDefault();const title=input.value.trim();if(!title)return;const parentId=composerParentId;closeComposer();const newTask=taskStore.create({title,parentId}).task;requestAnimationFrame(()=>{const row=[...document.querySelectorAll('.task-row')].find(el=>el.dataset.id===newTask.id);row?.scrollIntoView({block:'nearest',behavior:'smooth'});row?.focus({preventScroll:true});});showToast(parent?'子任务已添加':'新任务已添加');});
+      input.focus();form.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
+    const aiConfigKey='yijian-ai-config-v1';
+    let aiConfig={url:'',model:'',key:'',rememberKey:false};
+    try{const saved=JSON.parse(localStorage.getItem(aiConfigKey));if(saved&&typeof saved==='object')aiConfig={url:typeof saved.url==='string'?saved.url:'',model:typeof saved.model==='string'?saved.model:'',key:saved.rememberKey&&typeof saved.key==='string'?saved.key:'',rememberKey:!!saved.rememberKey};}catch{}
+    $('#ai-url').value=aiConfig.url;$('#ai-model').value=aiConfig.model;$('#ai-key').value=aiConfig.key;$('#remember-key').checked=aiConfig.rememberKey;
+    let aiAbort=null,aiBusy=false;
+    const aiSession=new TodoAI.ChatSession(taskStore,TodoTasks.tools,new TodoAI.CompatibleClient(aiConfig));
+    const welcomeTemplate=$('#chat-welcome').cloneNode(true);
+    function updateAiCaption(){$('#chat-caption').textContent=aiConfig.url&&aiConfig.model?'使用 '+aiConfig.model+' · 对话时可读取并调整当前清单。':'先在设置中连接你的 AI 服务。';}
+    function setChat(open){$('#workspace').classList.toggle('chat-open',open);$('#ai-panel').hidden=!open;$('#ai-launch').setAttribute('aria-expanded',String(open));if(open){closeSettings();closeMenu();$('#chat-input').focus();}else $('#ai-launch').focus();}
+    function openAiSettings(){if(matchMedia('(max-width:760px)').matches)setChat(false);closeMenu();$('#settings').hidden=false;$('#settings-button').setAttribute('aria-expanded','true');$('#ai-url').focus();$('#ai-url').scrollIntoView({block:'nearest'});}
+    function appendChat(text,kind='assistant'){
+      const message=document.createElement('div');message.className='chat-message '+kind;message.textContent=text;
+      const log=$('#chat-log');log.insertBefore(message,$('#ai-pending'));log.scrollTop=log.scrollHeight;return message;
+    }
+    function addUndo(before,revision){
+      const card=document.createElement('div');card.className='undo-card';
+      const label=document.createElement('span');label.textContent='本轮任务调整已保存';
+      const button=document.createElement('button');button.type='button';button.textContent='撤销本轮调整';button.dataset.undoRevision=revision;button.disabled=taskStore.revision!==revision;
+      button.addEventListener('click',()=>{try{taskStore.restore(before,revision);button.textContent='已撤销';button.disabled=true;label.textContent='已恢复本轮调整前的清单';aiSession.history.push({role:'user',content:'我已撤销上一轮对任务清单的调整。后续请以新的当前清单快照为准。'});}catch(error){showToast(error.message);}});
+      card.append(label,button);$('#chat-log').append(card);$('#chat-log').scrollTop=$('#chat-log').scrollHeight;
+    }
+    async function sendChat(){
+      const input=$('#chat-input'),text=input.value.trim();if(!text||aiBusy)return;
+      if(!aiConfig.url||!aiConfig.model){const message=appendChat('先填写 AI 的地址和模型名称，就可以开始对话。','system');const button=document.createElement('button');button.className='text-button';button.type='button';button.textContent='打开 AI 设置';button.addEventListener('click',openAiSettings);message.append(button);return;}
+      const before=taskStore.snapshot();activeAiTurn={externalChanges:false};
+      $('#chat-welcome')?.setAttribute('hidden','');appendChat(text,'user');input.value='';
+      aiBusy=true;$('#chat-send').disabled=true;$('#new-chat').disabled=true;$('#ai-stop').hidden=false;$('#chat-log').setAttribute('aria-busy','true');
+      const pending=appendChat('正在思考…','assistant pending');pending.id='ai-pending';
+      const controller=new AbortController();aiAbort=controller;let timedOut=false;
+      const timeout=setTimeout(()=>{timedOut=true;controller.abort();},90000);
+      aiSession.client=new TodoAI.CompatibleClient(aiConfig);
+      try{
+        await aiSession.send(text,{signal:controller.signal,onText:reply=>appendChat(reply),onTool:(name,result)=>{
+          if(name==='list_tasks')return;
+          const titles={create_task:'已添加',update_task:'已调整',set_task_completed:'已更新状态',move_task:'已调整顺序',delete_task:'已删除'};
+          if(result.ok){const task=result.task||result.removed?.[0];appendChat((titles[name]||'已执行')+(task?'「'+task.title+'」':''),'operation');}
+          else appendChat('本次操作未执行：'+result.error,'operation');
+        }});
+      }catch(error){appendChat(controller.signal.aborted?(timedOut?'本次回复超时，请稍后重试。':'已停止回复。'):error.message,controller.signal.aborted?'system':'error');}
+      finally{
+        clearTimeout(timeout);pending.remove();aiBusy=false;aiAbort=null;$('#chat-send').disabled=false;$('#new-chat').disabled=false;$('#ai-stop').hidden=true;$('#chat-log').setAttribute('aria-busy','false');
+        const undoAllowed=!activeAiTurn.externalChanges&&taskStore.revision!==before.revision;activeAiTurn=null;
+        if(undoAllowed)addUndo(before,taskStore.revision);
+        input.focus();
+      }
+    }
+    $('#ai-config-form').addEventListener('submit',e=>{
+      e.preventDefault();if(aiBusy){$('#config-status').textContent='请先停止当前回复再保存连接设置。';return;}
+      const config={url:$('#ai-url').value.trim(),model:$('#ai-model').value.trim(),key:$('#ai-key').value.trim(),rememberKey:$('#remember-key').checked};
+      try{TodoAI.endpoint(config.url);if(!config.model)throw new Error('请填写模型名称。');aiConfig=config;aiSession.client=new TodoAI.CompatibleClient(aiConfig);let saved=true;try{localStorage.setItem(aiConfigKey,JSON.stringify({...config,key:config.rememberKey?config.key:''}));}catch{saved=false;}$('#config-status').textContent=saved?'AI 设置已保存':'已应用，本机保存不可用';updateAiCaption();$('#ai-key').type='password';$('#toggle-key').setAttribute('aria-label','显示 Key');$('#toggle-key').setAttribute('aria-pressed','false');}
+      catch(error){$('#config-status').textContent=error.message;}
+    });
+    $('#toggle-key').addEventListener('click',()=>{const reveal=$('#ai-key').type==='password';$('#ai-key').type=reveal?'text':'password';$('#toggle-key').setAttribute('aria-label',reveal?'隐藏 Key':'显示 Key');$('#toggle-key').setAttribute('aria-pressed',String(reveal));});
+    $('#clear-ai-config').addEventListener('click',()=>{if(aiBusy){$('#config-status').textContent='请先停止当前回复。';return;}aiConfig={url:'',model:'',key:'',rememberKey:false};aiSession.client=new TodoAI.CompatibleClient(aiConfig);$('#ai-url').value='';$('#ai-model').value='';$('#ai-key').value='';$('#remember-key').checked=false;try{localStorage.removeItem(aiConfigKey);}catch{}updateAiCaption();$('#config-status').textContent='AI 配置已清除';});
+    $('#ai-launch').addEventListener('click',()=>setChat(!$('#workspace').classList.contains('chat-open')));
+    $('#close-chat').addEventListener('click',()=>setChat(false));$('#ai-settings').addEventListener('click',openAiSettings);
+    $('#chat-form').addEventListener('submit',e=>{e.preventDefault();sendChat();});
+    $('#chat-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();sendChat();}});
+    $('#ai-stop').addEventListener('click',()=>aiAbort?.abort());
+    $('#new-chat').addEventListener('click',()=>{if(aiBusy)return;aiSession.clear();$('#chat-log').replaceChildren(welcomeTemplate.cloneNode(true));$('#chat-input').focus();});
+    $('#chat-log').addEventListener('click',e=>{const suggestion=e.target.closest('[data-suggestion]');if(suggestion){$('#chat-input').value=suggestion.dataset.suggestion;sendChat();}});
+    updateAiCaption();
+    $('#date').textContent=new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(new Date());
+    $('#add-button').addEventListener('click',()=>openComposer());
+    $('#show-completed').addEventListener('change',e=>{state.settings.showCompleted=e.target.checked;persist();render();});
+    $('#create-child').addEventListener('click',()=>{const id=activeTaskId;openComposer(id);});
+    $('#complete-task').addEventListener('click',()=>toggleDone(activeTaskId));
+    $('#settings-button').addEventListener('click',()=>{const wasHidden=$('#settings').hidden;closeMenu();$('#settings').hidden=!wasHidden;$('#settings-button').setAttribute('aria-expanded',String(wasHidden));});
+    document.querySelectorAll('[data-setting]').forEach(button=>button.addEventListener('click',()=>{const key=button.dataset.setting;state.settings[key]=!state.settings[key];persist();render();}));
+    document.addEventListener('pointerdown',e=>{if(!e.target.closest('#context-menu'))closeMenu();if(!e.target.closest('#settings')&&!e.target.closest('#settings-button'))closeSettings();});
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){if(dragState){finishDrag();return;}if(!$('#context-menu').hidden){closeMenu(true);return;}if(!$('#settings').hidden){closeSettings();$('#settings-button').focus();return;}if(composerOpen){closeComposer();$('#add-button').focus();}}
+      if(!$('#context-menu').hidden&&['ArrowUp','ArrowDown','Home','End'].includes(e.key)){e.preventDefault();const items=[...$('#context-menu').querySelectorAll('button')];const current=items.indexOf(document.activeElement);items[e.key==='Home'?0:e.key==='End'?items.length-1:(current+(e.key==='ArrowDown'?1:-1)+items.length)%items.length].focus();}
+      if(e.key==='Tab'&&!$('#context-menu').hidden)closeMenu();
+    });
+    window.addEventListener('resize',()=>closeMenu());$('#task-scroll').addEventListener('scroll',()=>closeMenu());
+    function hideWindow(target){closeMenu();closeSettings();$('#workspace').hidden=true;$(target).hidden=false;$(target).querySelector('button').focus();}
+    $('#minimize-button').addEventListener('click',()=>hideWindow('#mini-bar'));
+    $('#close-button').addEventListener('click',()=>{aiAbort?.abort();hideWindow('#closed-state');});
+    function restoreWindow(){$('#mini-bar').hidden=true;$('#closed-state').hidden=true;$('#workspace').hidden=false;($('#workspace').classList.contains('chat-open')?$('#chat-input'):$('#add-button')).focus();}
+    $('#restore-button').addEventListener('click',restoreWindow);$('#reopen-button').addEventListener('click',()=>{restoreWindow();loadPoem();});
+    render();persist();loadPoem();
+  </script>
+</body>
+</html>
