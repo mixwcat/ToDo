@@ -10,18 +10,20 @@ Windows 使用 C# / .NET 8 / WPF；Ubuntu 使用 C# / .NET 8 / Avalonia 11。两
 
 ## 下载与安装
 
-当前版本：**v0.1.0**。以下安装包均为 x86-64，普通用户推荐选择完整版。
+当前版本：**v0.1.1**。以下安装包均为 x86-64，普通用户推荐选择完整版。
+
+本次更新：撤销按钮移至任务数量右侧，重命名和删除支持连续撤销；新增、完成或排序任务不会清空历史。详见[版本记录](CHANGELOG.md)。
 
 | 系统 | 完整版：自带 .NET 运行时 | 精简版：使用系统 .NET 运行时 |
 |---|---|---|
-| Windows 11 x64 | [安装包 · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-windows-x64-setup.exe) | [安装包 · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-windows-x64-lite-setup.exe) |
-| Ubuntu 22.04 / 24.04 amd64 | [deb · 31.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-ubuntu-amd64-lite.deb) |
+| Windows 11 x64 | [安装包 · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-setup.exe) | [安装包 · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-lite-setup.exe) |
+| Ubuntu 22.04 / 24.04 amd64 | [deb · 31.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-ubuntu-amd64-lite.deb) |
 
 完整版和精简版选择一种安装即可。安装包不在源码仓库中，请从 GitHub Releases 下载。Windows 双击 `.exe` 安装；Ubuntu 使用 `sudo apt install ./下载的文件名.deb`，具体要求见下文。
 
 更新或卸载前先从托盘菜单退出应用；两端卸载均保留用户任务、偏好和已记住的 Key。当前 Windows 安装包尚未进行代码签名。
 
-Release 提供 [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/SHA256SUMS.txt)。Windows 用 `Get-FileHash 文件名 -Algorithm SHA256` 对照；Ubuntu 用 `sha256sum 文件名` 对照。下载全部安装包后，也可执行 `sha256sum -c SHA256SUMS.txt`。
+Release 提供 [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/SHA256SUMS.txt)。Windows 用 `Get-FileHash 文件名 -Algorithm SHA256` 对照；Ubuntu 用 `sha256sum 文件名` 对照。下载全部安装包后，也可执行 `sha256sum -c SHA256SUMS.txt`。
 
 ## 项目结构
 
@@ -49,7 +51,8 @@ ToDo/
 
 ## 功能
 
-- 添加、修改、复制、直接删除任务，创建多层子任务；删除在主界面底部提供撤销，不弹出 AI。
+- 添加、修改、复制、直接删除任务，创建多层子任务；“我的任务”数量右侧的撤销按钮可按操作倒序连续撤销重命名和删除，删除撤销会恢复子任务。存在历史时按钮亮起，历史耗尽时灰色禁用，不弹出底部提示框或 AI。新增、完成、排序和展开收起不会清空历史，也不会被这个按钮撤销。
+- 撤销历史仅保留在当前运行中，最多 100 步，并限制保留的任务记录数量以控制内存；导入替换任务或撤销整个 AI 修改轮次时清空历史。
 - 点击任务文字或右侧三角展开、收起子任务；拖动左侧手柄调整同级未完成任务顺序。
 - 完成主任务同时完成全部子任务；取消完成子任务会重新打开祖先。完成项排在未完成项之后，同级完成项按最近完成优先排列。
 - “我的任务”右侧切换显示已完成任务。支持紧凑布局、深色主题、窗口拖动与托盘。
@@ -69,8 +72,8 @@ AI 按请求将任务清单和对话内容发送到你配置的服务；日常�
 
 | 安装包 | 使用方式 |
 |---|---|
-| `YijianTodo-0.1.0-windows-x64-setup.exe` | 完整版，自带 .NET，推荐普通用户使用 |
-| `YijianTodo-0.1.0-windows-x64-lite-setup.exe` | 精简版，需要系统已安装 .NET 8 Desktop Runtime x64 |
+| `YijianTodo-0.1.1-windows-x64-setup.exe` | 完整版，自带 .NET，推荐普通用户使用 |
+| `YijianTodo-0.1.1-windows-x64-lite-setup.exe` | 精简版，需要系统已安装 .NET 8 Desktop Runtime x64 |
 
 双击安装，为当前用户创建开始菜单、桌面入口和卸载项。安装位置默认是 `%LOCALAPPDATA%\Programs\YijianTodo`，无需管理员权限。升级和卸载前先从托盘退出；卸载保留 AppData 中的任务和 Key。当前生成的安装包没有代码签名。
 
@@ -97,13 +100,13 @@ cd ToDo
 
 ### 安装 .deb
 
-从 [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest) 下载 `YijianTodo-0.1.0-ubuntu-amd64.deb`，自带 .NET 运行时，在下载目录执行：
+从 [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest) 下载 `YijianTodo-0.1.1-ubuntu-amd64.deb`，自带 .NET 运行时，在下载目录执行：
 
 ```bash
-sudo apt install ./YijianTodo-0.1.0-ubuntu-amd64.deb
+sudo apt install ./YijianTodo-0.1.1-ubuntu-amd64.deb
 ```
 
-需要共用系统 .NET 时选择 `YijianTodo-0.1.0-ubuntu-amd64-lite.deb`。它声明 `dotnet-runtime-8.0` 依赖，需要系统软件源提供该包；Ubuntu 上使用的是 .NET Runtime，不需要 Windows Desktop Runtime。完整版和精简版是同一个软件包的两种构建，选择一种安装即可。
+需要共用系统 .NET 时选择 `YijianTodo-0.1.1-ubuntu-amd64-lite.deb`。它声明 `dotnet-runtime-8.0` 依赖，需要系统软件源提供该包；Ubuntu 上使用的是 .NET Runtime，不需要 Windows Desktop Runtime。完整版和精简版是同一个软件包的两种构建，选择一种安装即可。
 
 安装后从应用菜单启动，或执行 `yijian-todo`。软件安装在 `/usr/lib/yijian-todo`，任务仍保存在用户数据目录。卸载使用 `sudo apt remove yijian-todo`，保留用户任务及密钥环记录。
 
@@ -170,16 +173,16 @@ bash ubuntu/build.sh --framework-dependent
 Windows 安装器使用 NSIS，Ubuntu 安装器使用标准 Debian 包格式。以下命令在 Windows 根目录执行，需要 .NET 8 SDK、PowerShell 7 和 Python 3.10+：
 
 ```powershell
-.\build-release.ps1 -Version 0.1.0
+.\build-release.ps1 -Version 0.1.1
 ```
 
 它顺序生成四个安装包、校验文件和发布说明。也可分别构建：
 
 ```powershell
-.\windows\build-installer.ps1 -Version 0.1.0
-.\windows\build-installer.ps1 -Version 0.1.0 -Lite
-python ubuntu/build-deb.py --version 0.1.0
-python ubuntu/build-deb.py --version 0.1.0 --lite
+.\windows\build-installer.ps1 -Version 0.1.1
+.\windows\build-installer.ps1 -Version 0.1.1 -Lite
+python ubuntu/build-deb.py --version 0.1.1
+python ubuntu/build-deb.py --version 0.1.1 --lite
 ```
 
 请顺序执行，因为两个平台共用核心项目的构建目录。Windows 脚本优先使用已有的 `makensis.exe`；否则从 NSIS 官方下载固定版本 3.11 并校验 SHA-256，只解压到系统临时目录，不安装到系统。也可用 `-NsisCompiler /path/to/makensis.exe` 指定编译器。Ubuntu `.deb` 构建只使用 Python 标准库，不需要 WSL 或第三方 Python 包；`--runtime linux-arm64` 可生成 ARM64 包。
@@ -207,4 +210,4 @@ python ubuntu/build-deb.py --version 0.1.0 --lite
 
 可用 `dotnet build YijianTodo.sln -c Release` 编译两端；根目录 GitHub Actions 分别生成 Windows 与 Ubuntu 构建产物。诗库文本按二进制字节保存，避免 Git 换行转换破坏字节索引。
 
-当前已在 Windows 编译两个平台项目，完成隔离数据下的 Avalonia 无界面交互、本地模拟 AI 检查及安装包完整性校验。实际安装、卸载，以及真实 Ubuntu 桌面的窗口管理、托盘、密钥环和性能仍待实机验证。
+当前已在 Windows 编译两个平台项目，完成隔离数据下的 Avalonia 无界面交互、本地模拟 AI 检查及安装包完整性校验；v0.1.1 的连续撤销通过 38 项核心与界面检查。实际安装、卸载，以及真实 Ubuntu 桌面的窗口管理、托盘、密钥环和性能仍待实机验证。

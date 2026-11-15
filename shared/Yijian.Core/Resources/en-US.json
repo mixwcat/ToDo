@@ -20,6 +20,7 @@
   "添加任务": "Add task",
   "撤销": "Undo",
   "撤销删除": "Undo deletion",
+  "撤销重命名或删除": "Undo rename or deletion",
   "关闭撤销提示": "Dismiss undo notice",
   "所有改变，都会被好好记下": "Every little change, safely kept",
   "已完成 {0} / {1} 件事": "{0} of {1} tasks complete",

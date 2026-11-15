@@ -34,7 +34,7 @@ def ar_entry(stream, name, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version', default='0.1.0')
+    parser.add_argument('--version', default='0.1.1')
     parser.add_argument('--runtime', choices=['linux-x64', 'linux-arm64'], default='linux-x64')
     parser.add_argument('--lite', action='store_true', help='Require the system .NET 8 runtime')
     args = parser.parse_args()

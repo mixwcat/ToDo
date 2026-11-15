@@ -46,7 +46,7 @@ public sealed partial class MainWindow : Window {
     Grid root=null!,layout=null!,chat=null!; ColumnDefinition chatColumn=null!;
     ListBox taskList=null!; SelectableText poem=null!,date=null!,count=null!,progressLabel=null!,status=null!,empty=null!;
     ProgressBar progress=null!; CheckBox showCompleted=null!;
-    Border taskUndoNotice=null!; SelectableText taskUndoLabel=null!; TaskSnapshot? taskUndoSnapshot; long taskUndoRevision;
+    Button taskUndoButton=null!;
     ScrollViewer chatScroll=null!; StackPanel messages=null!; StackPanel? welcome; TextBox composer=null!; Button send=null!,newChat=null!;
     CancellationTokenSource? aiCancellation; string key=""; bool aiOpen,busy,initializing=true;
     Point dragStart; string? dragId;
@@ -97,6 +97,7 @@ public sealed partial class MainWindow : Window {
         var aiButton=Btn("✧  与 AI 对话","与 AI 对话",()=>ToggleAi(!aiOpen));aiButton.HorizontalAlignment=HorizontalAlignment.Left;aiButton.Background=B("Soft");aiButton.Foreground=B("Accent");aiButton.Padding=new Thickness(12,8,12,8);hero.Children.Add(aiButton);
         var summary=new Grid{Margin=new Thickness(28,0,27,15)};summary.RowDefinitions.Add(new RowDefinition());summary.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});summary.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});summary.ColumnDefinitions.Add(new ColumnDefinition());summary.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});Grid.SetRow(summary,2);main.Children.Add(summary);
         var taskHeading=new StackPanel{Orientation=Orientation.Horizontal};taskHeading.Children.Add(Text("我的任务",16));count=Text("",11,"Muted");count.Margin=new Thickness(9,0,0,0);taskHeading.Children.Add(count);summary.Children.Add(taskHeading);
+        taskUndoButton=Btn("↶","撤销重命名或删除",UndoTask);taskUndoButton.Width=28;taskUndoButton.Height=28;taskUndoButton.FontSize=20;taskUndoButton.Padding=new Thickness(0);taskUndoButton.Margin=new Thickness(7,0,0,0);taskUndoButton.VerticalAlignment=VerticalAlignment.Center;taskHeading.Children.Add(taskUndoButton);UpdateTaskUndo();
         showCompleted=new CheckBox{Content="显示已完成",Style=(Style)FindResource("CompletedFilter"),IsChecked=state.ShowCompleted,FontSize=11,VerticalAlignment=VerticalAlignment.Center};Localize(showCompleted,ContentControl.ContentProperty,"显示已完成");Automation(showCompleted,"显示已完成");showCompleted.Click+=(s,e)=>{state.ShowCompleted=showCompleted.IsChecked==true;Refresh();QueueSave();};Grid.SetColumn(showCompleted,1);summary.Children.Add(showCompleted);
         progressLabel=Text("",11,"Muted");progressLabel.Margin=new Thickness(0,13,0,7);Grid.SetRow(progressLabel,1);Grid.SetColumnSpan(progressLabel,2);summary.Children.Add(progressLabel);
         progress=new ProgressBar{Minimum=0,Maximum=100,Height=3,BorderThickness=new Thickness(0),Background=B("Line"),Foreground=B("Accent")};progress.Template=(ControlTemplate)XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ProgressBar'><Grid><Border x:Name='PART_Track' Background='{TemplateBinding Background}' CornerRadius='2'/><Border x:Name='PART_Indicator' HorizontalAlignment='Left' Background='{TemplateBinding Foreground}' CornerRadius='2'/></Grid></ControlTemplate>");Grid.SetRow(progress,2);Grid.SetColumnSpan(progress,2);summary.Children.Add(progress);
@@ -120,11 +121,6 @@ public sealed partial class MainWindow : Window {
         empty=Text("给今天留一点方向\n点击下方 ＋，添加一件事",13,"Muted");empty.TextAlignment=TextAlignment.Center;empty.HorizontalAlignment=HorizontalAlignment.Center;empty.VerticalAlignment=VerticalAlignment.Center;empty.LineHeight=27;listArea.Children.Add(empty);
         var add=Btn("＋   添加任务","添加任务",()=>EditTask(null,null));add.Margin=new Thickness(27,17,27,9);add.Height=44;add.Background=B("Soft");add.Foreground=B("Accent");add.FontSize=14;Grid.SetRow(add,4);main.Children.Add(add);
         var footer=new StackPanel();Grid.SetRow(footer,5);main.Children.Add(footer);
-        var undoContent=new Grid();undoContent.ColumnDefinitions.Add(new ColumnDefinition());undoContent.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});undoContent.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
-        taskUndoLabel=Text("",11,"Accent");undoContent.Children.Add(taskUndoLabel);
-        var undoDelete=Btn("撤销","撤销删除",()=>{var before=taskUndoSnapshot;var revision=taskUndoRevision;if(before==null)return;ClearTaskUndo();if(store.Restore(before,revision))ai.Clear();});undoDelete.Foreground=B("Accent");Grid.SetColumn(undoDelete,1);undoContent.Children.Add(undoDelete);
-        var dismissUndo=Btn("×","关闭撤销提示",ClearTaskUndo);Grid.SetColumn(dismissUndo,2);undoContent.Children.Add(dismissUndo);
-        taskUndoNotice=new Border{Background=B("Soft"),CornerRadius=new CornerRadius(8),Padding=new Thickness(11,3,4,3),Margin=new Thickness(27,0,27,4),Child=undoContent,Visibility=Visibility.Collapsed};footer.Children.Add(taskUndoNotice);
         status=Text("所有改变，都会被好好记下",10,"Muted");status.TextAlignment=TextAlignment.Center;status.Margin=new Thickness(12,5,12,16);footer.Children.Add(status);
         var divider=new Border();divider.SetResourceReference(Border.BackgroundProperty,"Line");Grid.SetColumn(divider,1);layout.Children.Add(divider);BuildChat();
     }
@@ -133,9 +129,9 @@ public sealed partial class MainWindow : Window {
         var done=snapshot.Tasks.Count(t=>t.Done);count.Text=(snapshot.Tasks.Count-done).ToString();progressLabel.Text=F("已完成 {0} / {1} 件事",done,snapshot.Tasks.Count);progress.Value=snapshot.Tasks.Count==0?0:done*100.0/snapshot.Tasks.Count;
         if(showCompleted!=null)showCompleted.IsChecked=state.ShowCompleted;
     }
-    void Changed(){ClearTaskUndo();Refresh();QueueSave();}
-    void ClearTaskUndo(){taskUndoSnapshot=null;if(taskUndoNotice!=null)taskUndoNotice.Visibility=Visibility.Collapsed;}
-    void ShowTaskUndo(string title,TaskSnapshot before,long revision){taskUndoSnapshot=before;taskUndoRevision=revision;Localize(taskUndoLabel,TextBox.TextProperty,title);taskUndoNotice.Visibility=Visibility.Visible;}
+    void Changed(){UpdateTaskUndo();Refresh();QueueSave();}
+    void UpdateTaskUndo(){if(taskUndoButton==null)return;var enabled=store.CanUndo;taskUndoButton.IsEnabled=enabled;taskUndoButton.SetResourceReference(Control.ForegroundProperty,enabled?"Accent":"Muted");if(enabled)taskUndoButton.SetResourceReference(Control.BackgroundProperty,"Soft");else taskUndoButton.Background=Transparent;taskUndoButton.Cursor=enabled?Cursors.Hand:Cursors.Arrow;}
+    void UndoTask(){try{if(store.Undo())ai.Clear();}catch(ArgumentException ex){status.Text=ex.Message;}}
     void QueueSave(){if(initializing)return;Localize(status,TextBox.TextProperty,"正在保存…");saveTimer.Stop();saveTimer.Start();}
     bool Save() {
         try {state.Tasks=store.Snapshot().Tasks;state.Height=RestoreBounds.Height>0?RestoreBounds.Height:Height;state.Left=Left;state.Top=Top;storage.Save(state);Localize(status,TextBox.TextProperty,"已保存在此设备");return true;}
@@ -152,7 +148,7 @@ public sealed partial class MainWindow : Window {
         menu.Resources.MergedDictionaries.Add(Resources);
         void Add(string title,string icon,Action action,bool destructive=false){var entry=new MenuItem{Header=T(title),Icon=icon};if(destructive)entry.Style=(Style)FindResource("DeleteMenuItem");entry.Click+=(s,e)=>action();menu.Items.Add(entry);}
         Add("创建子任务","＋",()=>EditTask(null,id));if(!item.Done)Add("标记任务为已完成","✓",()=>store.Complete(id,true));Add("修改任务","✎",()=>EditTask(id,null));
-        Add("复制任务文字","⧉",()=>Clipboard.SetText(item.Title));menu.Items.Add(new Separator());Add("删除任务","×",()=>{var before=store.Snapshot();store.Remove(id);ShowTaskUndo("已删除任务",before,store.Snapshot().Revision);},true);menu.IsOpen=true;
+        Add("复制任务文字","⧉",()=>Clipboard.SetText(item.Title));menu.Items.Add(new Separator());Add("删除任务","×",()=>store.Remove(id),true);menu.IsOpen=true;
     }
     void EditTask(string? id,string? parent) {
         var current=id==null?null:store.Snapshot().Tasks.FirstOrDefault(t=>t.Id==id);var dialog=Dialog(T(id!=null?"修改任务":parent!=null?"创建子任务":"添加任务"),360,220);

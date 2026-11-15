@@ -84,7 +84,7 @@ public sealed partial class MainWindow {
             await using var stream=await files[0].OpenReadAsync();using var buffer=new MemoryStream();var chunk=new byte[8192];int read;
             while((read=await stream.ReadAsync(chunk))>0){if(buffer.Length+read>8*1024*1024)throw new IOException(T("文件超过 8 MB。"));await buffer.WriteAsync(chunk.AsMemory(0,read));}
             using var json=JsonDocument.Parse(buffer.ToArray());var element=json.RootElement.ValueKind==JsonValueKind.Array?json.RootElement:json.RootElement.GetProperty("tasks");var tasks=JsonSerializer.Deserialize<List<TodoTask>>(element,StateStorage.Json)??throw new IOException(T("没有任务数据。"));TaskStore.Validate(tasks);
-            Confirm("导入任务","用导入文件替换当前任务？",()=>{var before=store.Snapshot();if(store.Restore(new(0,tasks),before.Revision)){ai.Clear();ShowUndo("已导入任务",before,store.Snapshot().Revision);}});
+            Confirm("导入任务","用导入文件替换当前任务？",()=>{var before=store.Snapshot();if(store.Restore(new(0,tasks),before.Revision)){ai.Clear();ToggleAi(true);ChatUndo(T("已导入任务"),before,store.Snapshot().Revision,true);}});
         }catch(Exception ex)when(ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException or KeyNotFoundException or InvalidOperationException){ReportError(T("导入失败")+": "+ex.Message);}
     }
 }

@@ -51,11 +51,10 @@ public sealed partial class MainWindow {
         void Add(string key,string icon,Action action,bool danger=false){var item=new MenuItem{Header=T(key),Icon=new TextBlock{Text=icon,Foreground=B(danger?"Danger":"Muted")}};if(danger)item.Classes.Add("danger");item.Click+=(s,e)=>{action();e.Handled=true;};menu.Items.Add(item);}
         Add("创建子任务","＋",()=>EditTask(null,id));if(!task.Done)Add("标记任务为已完成","✓",()=>store.Complete(id,true));Add("修改任务","✎",()=>EditTask(id,null));
         Add("复制任务文字","⧉",async()=>{if(Clipboard!=null)await Clipboard.SetTextAsync(task.Title);});menu.Items.Add(new Separator());
-        Add("删除任务","×",()=>{var before=store.Snapshot();store.Remove(id);ShowUndo("已删除任务",before,store.Snapshot().Revision);},true);return menu;
+        Add("删除任务","×",()=>store.Remove(id),true);return menu;
     }
-    void ClearUndo(){undoSnapshot=null;if(undoNotice!=null)undoNotice.IsVisible=false;}
-    void ShowUndo(string text,TaskSnapshot before,long revision){undoSnapshot=before;undoRevision=revision;Localize(undoLabel,TextBlock.TextProperty,text);undoNotice.IsVisible=true;}
-    void UndoTask(){var before=undoSnapshot;var revision=undoRevision;ClearUndo();if(before!=null&&store.Restore(before,revision))ai.Clear();}
+    void UpdateTaskUndo(){if(taskUndoButton==null)return;var enabled=store.CanUndo;taskUndoButton.IsEnabled=enabled;taskUndoButton.Foreground=B(enabled?"Accent":"Muted");taskUndoButton.Background=enabled?B("Soft"):Brushes.Transparent;taskUndoButton.Cursor=new Cursor(enabled?StandardCursorType.Hand:StandardCursorType.Arrow);}
+    void UndoTask(){try{if(store.Undo())ai.Clear();}catch(ArgumentException ex){ReportError(ex.Message);}}
 
     // Pointer capture keeps drag behavior local to this list, under both X11 and Wayland.
     // Only realized cards are inspected; the virtualized list does not retain off-screen cards.

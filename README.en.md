@@ -10,12 +10,14 @@ Windows uses C# / .NET 8 / WPF; Ubuntu uses C# / .NET 8 / Avalonia 11. Both inte
 
 ## Download and install
 
-Current version: **v0.1.0**. All downloads below target x86-64. The full edition is recommended for most users.
+Current version: **v0.1.1**. All downloads below target x86-64. The full edition is recommended for most users.
+
+This update moves undo beside the task count and adds repeated undo for renames and deletions. Creating, completing, or reordering tasks preserves history. See the [changelog](CHANGELOG.md).
 
 | Platform | Full: includes the .NET runtime | Lite: uses the system .NET runtime |
 |---|---|---|
-| Windows 11 x64 | [Installer · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-windows-x64-setup.exe) | [Installer · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-windows-x64-lite-setup.exe) |
-| Ubuntu 22.04 / 24.04 amd64 | [deb · 31.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/YijianTodo-0.1.0-ubuntu-amd64-lite.deb) |
+| Windows 11 x64 | [Installer · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-setup.exe) | [Installer · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-lite-setup.exe) |
+| Ubuntu 22.04 / 24.04 amd64 | [deb · 31.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-ubuntu-amd64-lite.deb) |
 
 Install either the full or Lite edition. Installers are available from [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest), rather than the source checkout.
 
@@ -30,7 +32,7 @@ The Lite edition requires [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.
 Open a terminal in your download directory and install the full edition:
 
 ```bash
-sudo apt install ./YijianTodo-0.1.0-ubuntu-amd64.deb
+sudo apt install ./YijianTodo-0.1.1-ubuntu-amd64.deb
 ```
 
 Launch it from the applications menu or run `yijian-todo`. Program files are installed under `/usr/lib/yijian-todo`.
@@ -49,11 +51,12 @@ sudo apt remove yijian-todo
 
 Quit the application from its tray menu before updating or uninstalling. Both platforms preserve user tasks, preferences, and remembered API keys when uninstalling.
 
-The release includes [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.0/SHA256SUMS.txt). Compare it with `Get-FileHash FILENAME -Algorithm SHA256` on Windows or `sha256sum FILENAME` on Ubuntu. If you download all installers, you can also run `sha256sum -c SHA256SUMS.txt`.
+The release includes [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/SHA256SUMS.txt). Compare it with `Get-FileHash FILENAME -Algorithm SHA256` on Windows or `sha256sum FILENAME` on Ubuntu. If you download all installers, you can also run `sha256sum -c SHA256SUMS.txt`.
 
 ## Features and controls
 
-- **Nested tasks:** add, edit, copy, and organize tasks into multiple levels. Right-click for the task menu. Deletion has no confirmation dialog and offers undo.
+- **Nested tasks:** add, edit, copy, and organize tasks into multiple levels. Right-click for the task menu. Deletion has no confirmation dialog. The undo button beside the “My tasks” count reverses renames and deletions one at a time, newest first, restoring descendants when undoing a deletion. It lights up while history is available and becomes gray and disabled when history is empty. Deleting tasks opens neither a bottom notice nor the AI panel. Creating, completing, reordering, or collapsing tasks neither clears this history nor gets undone by this button.
+- **Undo history:** kept in memory for the current session, up to 100 steps, with an additional limit on retained task records to bound memory use. Replacing tasks through import or undoing an entire AI turn clears the history.
 - **Collapsing and ordering:** click a task title or its triangle to toggle subtasks. Drag the left handle to reorder unfinished tasks under the same parent.
 - **Completion rules:** completing a parent completes all its descendants. Reopening a child reopens its ancestors. Completed tasks appear below unfinished tasks, with the most recently completed first under each parent.
 - **Completed task visibility:** use the toggle beside “My tasks” to show or hide completed items.
@@ -166,16 +169,16 @@ Linux execution permissions are preserved without running Ubuntu or WSL on the b
 Run from the repository root on Windows with the .NET 8 SDK, PowerShell 7, and Python 3.10+:
 
 ```powershell
-.\build-release.ps1 -Version 0.1.0
+.\build-release.ps1 -Version 0.1.1
 ```
 
 The `releases/` directory receives four installers, `SHA256SUMS.txt`, and `RELEASE-NOTES.md`. You can also build them separately:
 
 ```powershell
-.\windows\build-installer.ps1 -Version 0.1.0
-.\windows\build-installer.ps1 -Version 0.1.0 -Lite
-python ubuntu/build-deb.py --version 0.1.0
-python ubuntu/build-deb.py --version 0.1.0 --lite
+.\windows\build-installer.ps1 -Version 0.1.1
+.\windows\build-installer.ps1 -Version 0.1.1 -Lite
+python ubuntu/build-deb.py --version 0.1.1
+python ubuntu/build-deb.py --version 0.1.1 --lite
 ```
 
 Run these commands sequentially because both platforms share the core project's build directories. Windows packaging uses NSIS: the script uses an available `makensis.exe`, or downloads version 3.11, verifies its SHA256, and extracts it into a temporary directory. Use `-NsisCompiler` to specify a compiler. Ubuntu `.deb` packaging uses only the Python standard library and does not require WSL. Pass `--runtime linux-arm64` to build an ARM64 package.
@@ -188,4 +191,4 @@ GitHub Actions provides builds for both platforms and accepts a version when tri
 
 Shared translations live in `Strings.cs` and `Resources/en-US.json`. Ubuntu separates the main window, task list, chat, dialogs, and Linux platform services. General settings and AI configuration use separate panels. Lists use virtualization, chat and AI history are bounded, and the save timer runs only after changes. Single-instance activation uses local named pipes rather than a TCP port. The poetry corpus is stored as binary bytes in Git so line-ending conversion cannot invalidate its index.
 
-Build both projects with `dotnet build YijianTodo.sln -c Release`. Both projects have been compiled on Windows. Validation includes Avalonia headless interactions with isolated data, a local mock AI service, and installer integrity checks. Actual installation and uninstallation, as well as window management, tray behavior, keyring integration, and performance on a real Ubuntu desktop, still need device testing.
+Build both projects with `dotnet build YijianTodo.sln -c Release`. Both projects have been compiled on Windows. Validation includes Avalonia headless interactions with isolated data, a local mock AI service, and installer integrity checks. Version 0.1.1 also passes 38 shared-core and headless UI checks for repeated undo. Actual installation and uninstallation, as well as window management, tray behavior, keyring integration, and performance on a real Ubuntu desktop, still need device testing.

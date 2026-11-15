@@ -11,6 +11,9 @@ public sealed record TaskRow(TodoTask Task, int Depth, bool HasChildren);
 public sealed class TaskStore
 {
     readonly object gate = new();
+    const int MaxUndoEdits = 100, MaxUndoTasks = 10000;
+    readonly LinkedList<UndoEdit> undoHistory = new();
+    int undoTasks;
     List<TodoTask> tasks;
     long revision, lastCompletion;
     public event Action? Changed;
@@ -24,6 +27,35 @@ public sealed class TaskStore
         new("sample-3", "梳理主要界面与交互", "sample-2", true), new("sample-4", "试试右键，创建一个子任务", "sample-2"),
         new("sample-5", "读几页一直想看的书"), new("sample-6", "出门走走，给自己充充电", null, true)];
     public TaskSnapshot Snapshot() { lock (gate) return new(revision, [.. tasks]); }
+    public bool CanUndo { get { lock (gate) return undoHistory.Count > 0; } }
+    abstract record UndoEdit {
+        public abstract int Cost { get; }
+        public abstract void Apply(List<TodoTask> items);
+    }
+    sealed record RenameEdit(string Id, string PreviousTitle) : UndoEdit {
+        public override int Cost => 1;
+        public override void Apply(List<TodoTask> items) { var i=Find(items,Id); items[i]=items[i] with { Title=PreviousTitle }; }
+    }
+    sealed record RemovedTask(TodoTask Task, int Index);
+    sealed record DeleteEdit(List<RemovedTask> Removed) : UndoEdit {
+        public override int Cost => Removed.Count;
+        public override void Apply(List<TodoTask> items) { foreach(var entry in Removed) items.Insert(Math.Min(entry.Index,items.Count),entry.Task); }
+    }
+    // Retain only changed data, with bounded history rather than full-list snapshots.
+    void Remember(UndoEdit edit) {
+        undoHistory.AddLast(edit); undoTasks+=edit.Cost;
+        while(undoHistory.Count>1 && (undoHistory.Count>MaxUndoEdits || undoTasks>MaxUndoTasks)) {
+            undoTasks-=undoHistory.First!.Value.Cost; undoHistory.RemoveFirst();
+        }
+    }
+    public bool Undo() {
+        lock(gate) {
+            if(undoHistory.Last is not { } last) return false;
+            var next=new List<TodoTask>(tasks); last.Value.Apply(next); Validate(next);
+            tasks=next; undoTasks-=last.Value.Cost; undoHistory.RemoveLast(); revision++;
+        }
+        NotifyChanged(); return true;
+    }
     public static string Title(string text)
     { if (string.IsNullOrWhiteSpace(text) || text.Trim().Length > 200) throw new ArgumentException(T("任务名称需为 1–200 个字符。")); return text.Trim(); }
     public static void Validate(List<TodoTask> items)
@@ -41,8 +73,11 @@ public sealed class TaskStore
     }
     static int Find(List<TodoTask> list, string id) { var n = list.FindIndex(t => t.Id == id); return n >= 0 ? n : throw new ArgumentException(T("任务不存在，请重新读取清单。")); }
     static void Reopen(List<TodoTask> list, string? id) { while (id != null) { var i = Find(list,id); list[i] = list[i] with { Done=false, CompletedAt=0 }; id=list[i].ParentId; } }
-    void Change(Action<List<TodoTask>> change) {
-        lock(gate) { var next = new List<TodoTask>(tasks); change(next); Validate(next); tasks=next; revision++; }
+    void Change(Action<List<TodoTask>> change, Func<List<TodoTask>,List<TodoTask>,UndoEdit?>? undo=null) {
+        lock(gate) { var next = new List<TodoTask>(tasks); change(next); Validate(next); var edit=undo?.Invoke(tasks,next); tasks=next; if(edit!=null)Remember(edit); revision++; }
+        NotifyChanged();
+    }
+    void NotifyChanged() {
         if (Changed != null) foreach (Action observer in Changed.GetInvocationList()) { try { observer(); } catch { /* A failed view must not undo a committed operation. */ } }
     }
     public TodoTask Create(string title, string? parentId=null) {
@@ -52,6 +87,9 @@ public sealed class TaskStore
     public void Update(string id, string? title=null, string? parentId=null, bool changeParent=false) => Change(list => {
         var i=Find(list,id); list[i]=list[i] with { Title=title==null?list[i].Title:Title(title), ParentId=changeParent?parentId:list[i].ParentId };
         Validate(list); if (!list[i].Done) Reopen(list,list[i].ParentId);
+    }, (before,after)=>{
+        var old=before[Find(before,id)]; var current=after[Find(after,id)];
+        return old.Title!=current.Title ? new RenameEdit(id,old.Title) : null;
     });
     public void Complete(string id, bool done) => Change(list => {
         var i=Find(list,id);
@@ -72,10 +110,13 @@ public sealed class TaskStore
         Find(list,id); var selected=new HashSet<string> {id}; bool added;
         do { added=false; foreach(var t in list) if(t.ParentId!=null && selected.Contains(t.ParentId)) added |= selected.Add(t.Id); } while(added);
         list.RemoveAll(t=>selected.Contains(t.Id));
+    }, (before,after)=>{
+        var remaining=after.Select(t=>t.Id).ToHashSet();
+        return new DeleteEdit(before.Select((task,index)=>new RemovedTask(task,index)).Where(entry=>!remaining.Contains(entry.Task.Id)).ToList());
     });
     public bool Restore(TaskSnapshot snapshot, long expectedRevision) {
-        lock(gate) { if(revision!=expectedRevision) return false; Validate(snapshot.Tasks); tasks=[..snapshot.Tasks]; revision++; }
-        if(Changed!=null) foreach(Action observer in Changed.GetInvocationList()) {try {observer();} catch {}} return true;
+        lock(gate) { if(revision!=expectedRevision) return false; Validate(snapshot.Tasks); tasks=[..snapshot.Tasks]; undoHistory.Clear(); undoTasks=0; revision++; }
+        NotifyChanged(); return true;
     }
     public List<TaskRow> Visible(bool showCompleted) {
         var all=Snapshot().Tasks; var groups=all.GroupBy(t=>t.ParentId??"").ToDictionary(g=>g.Key,g=>g.OrderBy(t=>t.Done).ThenByDescending(t=>t.Done?t.CompletedAt:0).ToList());

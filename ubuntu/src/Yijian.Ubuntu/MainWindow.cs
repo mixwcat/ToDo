@@ -37,10 +37,7 @@ public sealed partial class MainWindow : Window {
     CheckBox completedFilter=null!;
     SelectableTextBlock date=null!,poem=null!,count=null!,progressText=null!,status=null!,empty=null!;
     ProgressBar progress=null!;
-    Border undoNotice=null!;
-    SelectableTextBlock undoLabel=null!;
-    TaskSnapshot? undoSnapshot;
-    long undoRevision;
+    Button taskUndoButton=null!;
     StackPanel messages=null!;
     StackPanel? welcome;
     ScrollViewer chatScroll=null!;
@@ -114,21 +111,20 @@ public sealed partial class MainWindow : Window {
         var companion=Btn("✧  与 AI 对话","与 AI 对话",()=>ToggleAi(!aiOpen),true);companion.HorizontalAlignment=HorizontalAlignment.Left;companion.Padding=new Thickness(12,8);hero.Children.Add(companion);
         var summary=new Grid{RowDefinitions=new RowDefinitions("Auto,Auto,Auto"),ColumnDefinitions=new ColumnDefinitions("*,Auto"),Margin=new Thickness(28,0,27,15)};Place(main,summary,2);
         var heading=new StackPanel{Orientation=Orientation.Horizontal,Spacing=9};heading.Children.Add(Label("我的任务",16));count=Label("",11,"Muted");heading.Children.Add(count);Place(summary,heading);
+        taskUndoButton=Btn("↶","撤销重命名或删除",UndoTask);taskUndoButton.Width=28;taskUndoButton.Height=28;taskUndoButton.FontSize=20;taskUndoButton.Padding=new Thickness(0);taskUndoButton.VerticalAlignment=VerticalAlignment.Center;heading.Children.Add(taskUndoButton);UpdateTaskUndo();
         completedFilter=new CheckBox{IsChecked=state.ShowCompleted,VerticalAlignment=VerticalAlignment.Center};completedFilter.Classes.Add("pill");Localize(completedFilter,ContentControl.ContentProperty,"显示已完成");completedFilter.Click+=(s,e)=>{state.ShowCompleted=completedFilter.IsChecked==true;RefreshTasks();QueueSave();};Place(summary,completedFilter,0,1);
         progressText=Label("",11,"Muted");progressText.Margin=new Thickness(0,13,0,7);Grid.SetColumnSpan(progressText,2);Place(summary,progressText,1);
         progress=new ProgressBar{Height=3,Minimum=0,Maximum=100,Foreground=B("Accent"),Background=B("Line"),ShowProgressText=false};Grid.SetColumnSpan(progress,2);Place(summary,progress,2);
         var listArea=new Grid();Place(main,listArea,3);BuildTaskList(listArea);
         empty=Label("给今天留一点方向\n点击下方 ＋，添加一件事",13,"Muted");empty.LineHeight=27;empty.TextAlignment=TextAlignment.Center;empty.HorizontalAlignment=HorizontalAlignment.Center;empty.VerticalAlignment=VerticalAlignment.Center;listArea.Children.Add(empty);
         var add=Btn("＋   添加任务","添加任务",()=>EditTask(null,null),true);add.Margin=new Thickness(27,17,27,9);add.Height=44;add.FontSize=14;add.HorizontalAlignment=HorizontalAlignment.Stretch;Place(main,add,4);
-        var footer=new StackPanel();Place(main,footer,5);var undoGrid=new Grid{ColumnDefinitions=new ColumnDefinitions("*,Auto,Auto")};undoLabel=Label("",11,"Accent");Place(undoGrid,undoLabel);
-        Place(undoGrid,Btn("撤销","撤销删除",UndoTask),0,1);Place(undoGrid,Btn("×","关闭撤销提示",ClearUndo),0,2);
-        undoNotice=new Border{Background=B("Soft"),CornerRadius=new CornerRadius(8),Padding=new Thickness(11,3,4,3),Margin=new Thickness(27,0,27,4),Child=undoGrid,IsVisible=false};footer.Children.Add(undoNotice);
+        var footer=new StackPanel();Place(main,footer,5);
         status=Label("所有改变，都会被好好记下",10,"Muted");status.TextAlignment=TextAlignment.Center;status.Margin=new Thickness(12,5,12,16);footer.Children.Add(status);
         Place(layout,new Border{Background=B("Line")},0,1);BuildChat();
     }
     void UpdateDate()=>date.Text=DateTime.Now.ToString(state.Language=="en-US"?"MMMM d  dddd":"M月d日  dddd",Strings.Current.Culture);
     void ApplyLanguage(string language){state.Language=language;Strings.Current.SetLanguage(language);UpdateDate();RefreshTasks();tray?.UpdateLanguage();}
-    void Changed(){ClearUndo();RefreshTasks();QueueSave();}
+    void Changed(){UpdateTaskUndo();RefreshTasks();QueueSave();}
     void QueueSave(){Localize(status,TextBlock.TextProperty,"正在保存…");saveTimer.Stop();saveTimer.Start();}
     bool Save() {
         try{state.Tasks=store.Snapshot().Tasks;if(WindowState==WindowState.Normal){state.Height=Height;state.Left=Position.X;state.Top=Position.Y;}storage.Save(state);Localize(status,TextBlock.TextProperty,"已保存在此设备");return true;}
