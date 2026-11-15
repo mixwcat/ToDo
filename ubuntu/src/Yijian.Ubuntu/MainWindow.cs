@@ -93,7 +93,8 @@ public sealed partial class MainWindow : Window {
     ContextMenu PopupMenu(){var menu=new ContextMenu();foreach(var (name,brush) in palette)menu.Resources[name]=brush;return menu;}
     static void Place(Grid parent,Control child,int row=0,int column=0){Grid.SetRow(child,row);Grid.SetColumn(child,column);parent.Children.Add(child);}
     void Build() {
-        root=new Grid();Content=root;
+        // A transparent background makes empty space participate in pointer hit testing.
+        root=new Grid{Background=Brushes.Transparent};Content=root;
         layout=new Grid{ColumnDefinitions=new ColumnDefinitions("*,1,0")};layout.ColumnDefinitions[0].MinWidth=370;chatColumn=layout.ColumnDefinitions[2];root.Children.Add(layout);
         root.PointerPressed+=(s,e)=>{
             if(root.Children.Count>1||!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)return;
@@ -102,8 +103,11 @@ public sealed partial class MainWindow : Window {
             BeginMoveDrag(e);e.Handled=true;
         };
         var main=new Grid{RowDefinitions=new RowDefinitions("Auto,Auto,Auto,*,Auto,Auto")};Place(layout,main);
-        var header=new Grid{ColumnDefinitions=new ColumnDefinitions("*,Auto"),Margin=new Thickness(22,17,12,0),Height=38};Place(main,header);
-        var brand=new StackPanel{Orientation=Orientation.Horizontal,Spacing=10};brand.Children.Add(new Border{Background=B("Accent"),CornerRadius=new CornerRadius(8),Width=30,Height=30,Child=new TextBlock{Text="✓",Foreground=B("Bg"),FontSize=22,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center}});brand.Children.Add(Label("一件",17));brand.Children.Add(Label("TODO",10,"Muted"));Place(header,brand);
+        var header=new Grid{Background=Brushes.Transparent,ColumnDefinitions=new ColumnDefinitions("*,Auto"),Margin=new Thickness(22,17,12,0),Height=38};Place(main,header);
+        // The title is a drag handle; keep selectable text in the content area only.
+        var brandTitle=new TextBlock{FontSize=17,Foreground=B("Fg"),VerticalAlignment=VerticalAlignment.Center};Localize(brandTitle,TextBlock.TextProperty,"一件");
+        var brandTag=new TextBlock{FontSize=10,Foreground=B("Muted"),VerticalAlignment=VerticalAlignment.Center};Localize(brandTag,TextBlock.TextProperty,"TODO");
+        var brand=new StackPanel{Orientation=Orientation.Horizontal,Spacing=10};brand.Children.Add(new Border{Background=B("Accent"),CornerRadius=new CornerRadius(8),Width=30,Height=30,Child=new TextBlock{Text="✓",Foreground=B("Bg"),FontSize=22,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center}});brand.Children.Add(brandTitle);brand.Children.Add(brandTag);Place(header,brand);
         var controls=new StackPanel{Orientation=Orientation.Horizontal};controls.Children.Add(Btn("⚙","设置",Settings));controls.Children.Add(Btn("—","最小化",()=>WindowState=WindowState.Minimized));controls.Children.Add(Btn("✕","关闭",Close));Place(header,controls,0,1);
         var hero=new StackPanel{Margin=new Thickness(28,31,25,24)};Place(main,hero,1);date=Label("",11,"Muted");UpdateDate();hero.Children.Add(date);
         poem=Label("行到水穷处，\n坐看云起时。",23,translate:false);poem.FontFamily=new FontFamily("Noto Serif CJK SC,serif");poem.LineHeight=35;poem.Margin=new Thickness(0,13,0,13);hero.Children.Add(poem);

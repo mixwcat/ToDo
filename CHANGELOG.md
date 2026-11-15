@@ -1,5 +1,25 @@
 # 版本记录 · Changelog
 
+## v0.1.2 · 2026-11-15 · Linux
+
+### 简体中文
+
+- 修复 Ubuntu 无边框窗口无法从顶部标题或空白区域拖动的问题：空白区域接收鼠标事件，顶部标题不再作为可选中文字处理。
+- 正文仍支持选择复制，按钮、任务列表和对话框沿用原有交互。
+- Debian 安装包增加 ICU 76、78 依赖候选，兼容 Ubuntu 26.04 使用的 ICU 78。
+- 本次仅发布 Linux 完整版和精简版；Windows 下载仍为 v0.1.1。
+
+验证：Linux Release 编译通过（0 警告、0 错误），用户已完成 Ubuntu 窗口拖动测试。两个安装包均通过文件完整性与隔离数据启动检查；完整版通过 Ubuntu 26.04 安装依赖模拟检查。
+
+### English
+
+- Fixed dragging the borderless Ubuntu window by its title and empty areas. Empty areas now participate in pointer hit testing, and the title uses non-selectable text.
+- Body text remains selectable; buttons, task lists, and dialogs retain their existing input handling.
+- Added ICU 76 and 78 alternatives to Debian package dependencies, including ICU 78 used by Ubuntu 26.04.
+- This release contains Linux full and Lite installers only. Windows downloads remain at v0.1.1.
+
+Validation: Linux Release build passed with zero warnings or errors; the user verified window dragging on Ubuntu. Both installers passed file integrity and isolated-data startup checks. The full edition passed an Ubuntu 26.04 dependency-resolution simulation.
+
 ## v0.1.1 · 2026-11-15
 
 ### 简体中文

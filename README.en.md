@@ -10,14 +10,14 @@ Windows uses C# / .NET 8 / WPF; Ubuntu uses C# / .NET 8 / Avalonia 11. Both inte
 
 ## Download and install
 
-Current version: **v0.1.1**. All downloads below target x86-64. The full edition is recommended for most users.
+Current versions: **Linux v0.1.2 / Windows v0.1.1**. All downloads below target x86-64. The full edition is recommended for most users.
 
-This update moves undo beside the task count and adds repeated undo for renames and deletions. Creating, completing, or reordering tasks preserves history. See the [changelog](CHANGELOG.md).
+Linux v0.1.2 fixes window dragging from the title and empty areas and adds Ubuntu 26.04 installation dependencies. Windows remains at v0.1.1, with repeated undo for renames and deletions. See the [changelog](CHANGELOG.md).
 
 | Platform | Full: includes the .NET runtime | Lite: uses the system .NET runtime |
 |---|---|---|
 | Windows 11 x64 | [Installer · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-setup.exe) | [Installer · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-lite-setup.exe) |
-| Ubuntu 22.04 / 24.04 amd64 | [deb · 31.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-ubuntu-amd64-lite.deb) |
+| Ubuntu 22.04 / 24.04 / 26.04 amd64 | [deb · 31.3 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/YijianTodo-0.1.2-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/YijianTodo-0.1.2-ubuntu-amd64-lite.deb) |
 
 Install either the full or Lite edition. Installers are available from [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest), rather than the source checkout.
 
@@ -32,7 +32,7 @@ The Lite edition requires [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.
 Open a terminal in your download directory and install the full edition:
 
 ```bash
-sudo apt install ./YijianTodo-0.1.1-ubuntu-amd64.deb
+sudo apt install ./YijianTodo-0.1.2-ubuntu-amd64.deb
 ```
 
 Launch it from the applications menu or run `yijian-todo`. Program files are installed under `/usr/lib/yijian-todo`.
@@ -51,7 +51,7 @@ sudo apt remove yijian-todo
 
 Quit the application from its tray menu before updating or uninstalling. Both platforms preserve user tasks, preferences, and remembered API keys when uninstalling.
 
-The release includes [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/SHA256SUMS.txt). Compare it with `Get-FileHash FILENAME -Algorithm SHA256` on Windows or `sha256sum FILENAME` on Ubuntu. If you download all installers, you can also run `sha256sum -c SHA256SUMS.txt`.
+Linux v0.1.2 includes [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/SHA256SUMS.txt); Windows v0.1.1 checksums are in [its release](https://github.com/mixwcat/ToDo/releases/tag/v0.1.1). Compare it with `Get-FileHash FILENAME -Algorithm SHA256` on Windows or `sha256sum FILENAME` on Ubuntu. If you download all installers, you can also run `sha256sum -c SHA256SUMS.txt`.
 
 ## Features and controls
 
@@ -177,8 +177,8 @@ The `releases/` directory receives four installers, `SHA256SUMS.txt`, and `RELEA
 ```powershell
 .\windows\build-installer.ps1 -Version 0.1.1
 .\windows\build-installer.ps1 -Version 0.1.1 -Lite
-python ubuntu/build-deb.py --version 0.1.1
-python ubuntu/build-deb.py --version 0.1.1 --lite
+python ubuntu/build-deb.py --version 0.1.2
+python ubuntu/build-deb.py --version 0.1.2 --lite
 ```
 
 Run these commands sequentially because both platforms share the core project's build directories. Windows packaging uses NSIS: the script uses an available `makensis.exe`, or downloads version 3.11, verifies its SHA256, and extracts it into a temporary directory. Use `-NsisCompiler` to specify a compiler. Ubuntu `.deb` packaging uses only the Python standard library and does not require WSL. Pass `--runtime linux-arm64` to build an ARM64 package.
@@ -191,4 +191,4 @@ GitHub Actions provides builds for both platforms and accepts a version when tri
 
 Shared translations live in `Strings.cs` and `Resources/en-US.json`. Ubuntu separates the main window, task list, chat, dialogs, and Linux platform services. General settings and AI configuration use separate panels. Lists use virtualization, chat and AI history are bounded, and the save timer runs only after changes. Single-instance activation uses local named pipes rather than a TCP port. The poetry corpus is stored as binary bytes in Git so line-ending conversion cannot invalidate its index.
 
-Build both projects with `dotnet build YijianTodo.sln -c Release`. Both projects have been compiled on Windows. Validation includes Avalonia headless interactions with isolated data, a local mock AI service, and installer integrity checks. Version 0.1.1 also passes 38 shared-core and headless UI checks for repeated undo. Actual installation and uninstallation, as well as window management, tray behavior, keyring integration, and performance on a real Ubuntu desktop, still need device testing.
+Build both projects with `dotnet build YijianTodo.sln -c Release`. Both projects have been compiled on Windows. Validation includes Avalonia headless interactions with isolated data, a local mock AI service, and installer integrity checks. Version 0.1.1 also passes 38 shared-core and headless UI checks for repeated undo. Actual installation and uninstallation, as well as tray behavior, keyring integration, and performance on a real Ubuntu desktop, still need device testing. The user verified the v0.1.2 window dragging fix on an Ubuntu desktop.

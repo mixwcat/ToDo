@@ -78,7 +78,7 @@ StartupWMClass=YijianTodo
         installed_kb = (sum(len(data) for _, data, _ in files) + 1023) // 1024
         dependencies = [
             'libc6 (>= 2.35)', 'libgcc-s1', 'libstdc++6', 'zlib1g',
-            'libicu70 | libicu74', 'libssl3 | libssl3t64', 'ca-certificates',
+            'libicu70 | libicu74 | libicu76 | libicu78', 'libssl3 | libssl3t64', 'ca-certificates',
             'libx11-6', 'libice6', 'libsm6', 'libfontconfig1', 'libfreetype6',
             'libxext6', 'libxrender1', 'libxi6', 'libxrandr2', 'libxcursor1', 'libglib2.0-bin'
         ]
