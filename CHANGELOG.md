@@ -1,5 +1,21 @@
 # 版本记录 · Changelog
 
+## v0.1.3 · 2026-11-19
+
+### 简体中文
+
+- Windows 与 Ubuntu 同步新增**小便签**功能：按 `F2`（支持失焦全局快捷键与 `--open-note` 参数）或点击顶部 `✍` 按钮即可打开小便签，支持同时打开多个可自由拖拽、缩放的便签窗口。
+- 便签内支持输入多行文字与 `Ctrl+V` 粘贴剪贴板图片、复制的图片文件或本地图片路径（单入口防重入处理，避免重复生成图片）。
+- 偏好设置新增“打开便签快捷键”按键录制与“便签图片保存路径”目录配置。
+- 双击便签中的图片即可调用系统默认图片查看器打开图片，右键图片支持打开或删除。
+
+### English
+
+- Added **Sticky Notes** to both Windows and Ubuntu: press `F2` (with global hotkey support when unfocused and `--open-note` CLI argument) or click the `✍` header button to open multiple independent, draggable, and resizable sticky note windows.
+- Sticky notes support multi-line text input and `Ctrl+V` image pasting from clipboard bitmaps, copied image files, or local image paths without duplicate entries.
+- Added shortcut key recording and note image save directory settings in Preferences.
+- Double-clicking an image inside a sticky note opens it with the system's default image viewer; right-clicking provides Open and Remove actions.
+
 ## v0.1.2 · 2026-11-15 · Linux
 
 ### 简体中文

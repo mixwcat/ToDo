@@ -18,6 +18,18 @@ public sealed class AppState {
     public double Left { get; set; } = double.NaN;
     public double Top { get; set; } = double.NaN;
     public double Height { get; set; } = 780;
+    public string NoteShortcut { get; set; } = "F2";
+    public string NoteImageDir { get; set; } = "";
+    public List<StickyNote> Notes { get; set; } = [];
+}
+public sealed class StickyNote {
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Text { get; set; } = "";
+    public List<string> Images { get; set; } = [];
+    public double Left { get; set; } = double.NaN;
+    public double Top { get; set; } = double.NaN;
+    public double Width { get; set; } = 320;
+    public double Height { get; set; } = 340;
 }
 public sealed class StateStorage(string directory) {
     public static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy=JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive=true, WriteIndented=true, NumberHandling=System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };

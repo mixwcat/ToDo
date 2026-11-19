@@ -23,12 +23,16 @@ internal sealed class SingleInstance : IDisposable {
             try {
                 using var server=new NamedPipeServerStream(pipeName,PipeDirection.In,1,PipeTransmissionMode.Byte,PipeOptions.Asynchronous|PipeOptions.CurrentUserOnly);
                 await server.WaitForConnectionAsync(stop.Token);
-                var buffer=new byte[1];if(await server.ReadAsync(buffer,stop.Token)>0&&buffer[0]==1)Activated?.Invoke();
+                var buffer=new byte[1];if(await server.ReadAsync(buffer,stop.Token)>0) {
+                    if(buffer[0]==1) Activated?.Invoke();
+                    else if(buffer[0]==2) OpenNoteRequested?.Invoke();
+                }
             }catch(OperationCanceledException){break;}catch(IOException){break;}
         }
     }
-    public void ActivateExisting() {
-        try{using var client=new NamedPipeClientStream(".",pipeName,PipeDirection.Out,PipeOptions.CurrentUserOnly);client.Connect(1500);client.WriteByte(1);}catch(IOException){}catch(TimeoutException){}
+    public event Action? OpenNoteRequested;
+    public void ActivateExisting(bool openNote=false) {
+        try{using var client=new NamedPipeClientStream(".",pipeName,PipeDirection.Out,PipeOptions.CurrentUserOnly);client.Connect(1500);client.WriteByte(openNote?(byte)2:(byte)1);}catch(IOException){}catch(TimeoutException){}
     }
     public void Dispose(){stop.Cancel();mutex.Dispose();/* Pending pipe I/O observes cancellation; no thread is blocked. */}
 }

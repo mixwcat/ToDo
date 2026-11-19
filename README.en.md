@@ -10,14 +10,14 @@ Windows uses C# / .NET 8 / WPF; Ubuntu uses C# / .NET 8 / Avalonia 11. Both inte
 
 ## Download and install
 
-Current versions: **Linux v0.1.2 / Windows v0.1.1**. All downloads below target x86-64. The full edition is recommended for most users.
+Current version: **v0.1.3**. All downloads below target x86-64. The full edition is recommended for most users.
 
-Linux v0.1.2 fixes window dragging from the title and empty areas and adds Ubuntu 26.04 installation dependencies. Windows remains at v0.1.1, with repeated undo for renames and deletions. See the [changelog](CHANGELOG.md).
+v0.1.3 adds **Sticky Notes** to both Windows and Ubuntu: press `F2` (including global hotkey support when unfocused) or click the top `✍` button to open multiple draggable sticky note windows, type text and paste images or image paths with `Ctrl+V`, customize the note shortcut and image save directory in Settings, and double-click any pasted image to open it in the system's default image viewer. See the [changelog](CHANGELOG.md).
 
 | Platform | Full: includes the .NET runtime | Lite: uses the system .NET runtime |
 |---|---|---|
 | Windows 11 x64 | [Installer · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-setup.exe) | [Installer · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-lite-setup.exe) |
-| Ubuntu 22.04 / 24.04 / 26.04 amd64 | [deb · 31.3 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/YijianTodo-0.1.2-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/YijianTodo-0.1.2-ubuntu-amd64-lite.deb) |
+| Ubuntu 22.04 / 24.04 / 26.04 amd64 | [deb · 31.3 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.3/YijianTodo-0.1.3-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.3/YijianTodo-0.1.3-ubuntu-amd64-lite.deb) |
 
 Install either the full or Lite edition. Installers are available from [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest), rather than the source checkout.
 
@@ -61,6 +61,7 @@ Linux v0.1.2 includes [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/
 - **Completion rules:** completing a parent completes all its descendants. Reopening a child reopens its ancestors. Completed tasks appear below unfinished tasks, with the most recently completed first under each parent.
 - **Completed task visibility:** use the toggle beside “My tasks” to show or hide completed items.
 - **Desktop controls:** dark theme, compact layout, window dragging, tray integration, and a single running instance. Choose whether the close button quits or hides the application to the tray.
+- **Sticky notes:** press the configured shortcut (defaults to `F2`, with global hotkey support when unfocused and `--open-note` CLI support) or click `✍` in the header to open multiple independent, draggable sticky note windows. Type text and paste clipboard bitmaps, image files, or local image file paths with `Ctrl+V`. Configure the shortcut key and image save directory in Settings, and double-click any image in a note to open it with the system's default image viewer.
 - **Chinese and English:** select the interface language in Settings and save to apply immediately. Task titles, existing conversations, and poems retain their original text.
 - **Poetry on startup:** each launch selects a couplet of five- or seven-character Chinese verse. A byte index allows reading one entry without loading the entire corpus into memory.
 - **Local data:** tasks save automatically. Import and export JSON to transfer tasks between platforms; automatic cloud synchronization is not included.

@@ -10,14 +10,14 @@ Windows 使用 C# / .NET 8 / WPF；Ubuntu 使用 C# / .NET 8 / Avalonia 11。两
 
 ## 下载与安装
 
-当前版本：**Linux v0.1.2 / Windows v0.1.1**。以下安装包均为 x86-64，普通用户推荐选择完整版。
+当前版本：**v0.1.3**。以下安装包均为 x86-64，普通用户推荐选择完整版。
 
-Linux v0.1.2 修复窗口无法从顶部标题或空白区域拖动的问题，并补充 Ubuntu 26.04 的安装依赖。Windows 继续使用 v0.1.1，包含重命名和删除的连续撤销。详见[版本记录](CHANGELOG.md)。
+v0.1.3 为 Windows 与 Ubuntu 同步新增**小便签**功能：支持按快捷键（默认 `F2`，含窗口失焦时全局触发）或点击主界面顶部 `✍` 按钮打开多个可自由拖拽的便签窗口，支持输入文字与 `Ctrl+V` 粘贴图片/图片路径，可在设置中自定义便签打开快捷键与图片保存路径，并支持双击便签中的图片调用系统默认图片查看器打开。详见[版本记录](CHANGELOG.md)。
 
 | 系统 | 完整版：自带 .NET 运行时 | 精简版：使用系统 .NET 运行时 |
 |---|---|---|
 | Windows 11 x64 | [安装包 · 50.4 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-setup.exe) | [安装包 · 3.7 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.1/YijianTodo-0.1.1-windows-x64-lite-setup.exe) |
-| Ubuntu 22.04 / 24.04 / 26.04 amd64 | [deb · 31.3 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/YijianTodo-0.1.2-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.2/YijianTodo-0.1.2-ubuntu-amd64-lite.deb) |
+| Ubuntu 22.04 / 24.04 / 26.04 amd64 | [deb · 31.3 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.3/YijianTodo-0.1.3-ubuntu-amd64.deb) | [deb · 9.5 MB](https://github.com/mixwcat/ToDo/releases/download/v0.1.3/YijianTodo-0.1.3-ubuntu-amd64-lite.deb) |
 
 完整版和精简版选择一种安装即可。安装包不在源码仓库中，请从 GitHub Releases 下载。Windows 双击 `.exe` 安装；Ubuntu 使用 `sudo apt install ./下载的文件名.deb`，具体要求见下文。
 
@@ -56,6 +56,7 @@ ToDo/
 - 点击任务文字或右侧三角展开、收起子任务；拖动左侧手柄调整同级未完成任务顺序。
 - 完成主任务同时完成全部子任务；取消完成子任务会重新打开祖先。完成项排在未完成项之后，同级完成项按最近完成优先排列。
 - “我的任务”右侧切换显示已完成任务。支持紧凑布局、深色主题、窗口拖动与托盘。
+- **小便签**：按快捷键（默认 `F2`，支持窗口失焦时的全局快捷键及 `--open-note` 启动参数）或点击顶部 `✍` 按钮可打开多个独立便签窗口；便签窗口可自由拖拽与调整尺寸，支持输入文字及 `Ctrl+V` 粘贴剪贴板图片、图片文件或本地图片路径；偏好设置中可自定义打开便签的快捷按键与图片保存路径；双击便签中的图片即可使用系统默认图片查看器打开。
 - 设置中选择简体中文或 English，保存后立即生效；保留任务、诗句、对话和草稿。任务标题与已有对话不做自动翻译。
 - 每次启动从本地诗库随机读取一联五言或七言诗。通过小索引读取单条，不把整个诗库载入内存；英文界面保留诗句原文。
 - “与 AI 对话”展开右侧任务伙伴。通用设置只保留“AI 配置”按钮，点击打开独立配置面板；聊天面板齿轮也可直接进入。

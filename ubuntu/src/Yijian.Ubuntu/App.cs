@@ -14,7 +14,13 @@ public sealed class App : Application {
     public override void OnFrameworkInitializationCompleted() {
         if(ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
             var window=new MainWindow(new StateStorage(DataRoot));desktop.MainWindow=window;
-            if(Instance!=null)Instance.Activated+=()=>Dispatcher.UIThread.Post(window.RestoreWindow);
+            if(Instance!=null) {
+                Instance.Activated+=()=>Dispatcher.UIThread.Post(window.RestoreWindow);
+                Instance.OpenNoteRequested+=()=>Dispatcher.UIThread.Post(()=>window.OpenNewNote());
+            }
+            if(Environment.GetCommandLineArgs().Contains("--open-note")) {
+                Dispatcher.UIThread.Post(window.OpenNewNote);
+            }
             Dispatcher.UIThread.UnhandledException+=(s,e)=>{window.ReportError(e.Exception.Message);e.Handled=true;};
         }
         base.OnFrameworkInitializationCompleted();

@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Data;
+using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Shell;
@@ -41,6 +42,7 @@ public sealed partial class MainWindow : Window {
     readonly StateStorage storage; readonly AppState state; readonly TaskStore store;
     readonly AiClient ai=new();
     readonly Dictionary<string,ThemeColor> palette=[];
+    readonly List<NoteWindow> openNotes=[];
     sealed class ThemeColor(Color value) : INotifyPropertyChanged { public event PropertyChangedEventHandler? PropertyChanged; Color color=value; public Color Value {get=>color;set{color=value;PropertyChanged?.Invoke(this,new(nameof(Value)));}} }
     readonly DispatcherTimer saveTimer;
     Grid root=null!,layout=null!,chat=null!; ColumnDefinition chatColumn=null!;
@@ -48,28 +50,44 @@ public sealed partial class MainWindow : Window {
     ProgressBar progress=null!; CheckBox showCompleted=null!;
     Button taskUndoButton=null!;
     ScrollViewer chatScroll=null!; StackPanel messages=null!; StackPanel? welcome; TextBox composer=null!; Button send=null!,newChat=null!;
-    CancellationTokenSource? aiCancellation; string key=""; bool aiOpen,busy,initializing=true;
+    CancellationTokenSource? aiCancellation; string key=""; bool aiOpen,busy,initializing=true,capturingShortcut;
+    DateTime lastNoteOpened=DateTime.MinValue;
     Point dragStart; string? dragId;
     TrayIcon? tray; bool exitRequested;
+    HwndSource? hwndSource;
     static readonly Brush Transparent=Brushes.Transparent;
 
     public MainWindow(StateStorage storage) {
-        this.storage=storage;state=storage.Load();state.Language=state.Language=="en-US"?"en-US":"zh-CN";Strings.Current.SetLanguage(state.Language);store=new TaskStore(state.Tasks);key=state.RememberKey?SecretStore.Read(storage.DirectoryPath):"";
+        this.storage=storage;state=storage.Load();state.Language=state.Language=="en-US"?"en-US":"zh-CN";Strings.Current.SetLanguage(state.Language);
+        if(string.IsNullOrWhiteSpace(state.NoteShortcut))state.NoteShortcut="F2";
+        store=new TaskStore(state.Tasks);key=state.RememberKey?SecretStore.Read(storage.DirectoryPath):"";
         Icon=System.Windows.Media.Imaging.BitmapFrame.Create(new Uri(Path.Combine(AppContext.BaseDirectory,"Assets","app.ico")));Localize(this,TitleProperty,"一件 Todo");Width=420;Height=Math.Clamp(state.Height,560,SystemParameters.WorkArea.Height);MinWidth=380;MinHeight=560;
         WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.CanResize;FontFamily=new FontFamily("Microsoft YaHei UI");FontSize=13;UseLayoutRounding=true;
         WindowChrome.SetWindowChrome(this,new WindowChrome{CaptionHeight=0,ResizeBorderThickness=new Thickness(6),CornerRadius=new CornerRadius(12),GlassFrameThickness=new Thickness(0)});
         if(double.IsFinite(state.Left)&&double.IsFinite(state.Top)) {Left=Math.Clamp(state.Left,SystemParameters.VirtualScreenLeft,Math.Max(SystemParameters.VirtualScreenLeft,SystemParameters.VirtualScreenLeft+SystemParameters.VirtualScreenWidth-Width));Top=Math.Clamp(state.Top,SystemParameters.VirtualScreenTop,Math.Max(SystemParameters.VirtualScreenTop,SystemParameters.VirtualScreenTop+SystemParameters.VirtualScreenHeight-Height));WindowStartupLocation=WindowStartupLocation.Manual;}
         else WindowStartupLocation=WindowStartupLocation.CenterScreen;
         Theme();Build();
+        PreviewKeyDown+=OnMainWindowPreviewKeyDown;
         saveTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(300)};saveTimer.Tick+=(s,e)=>{saveTimer.Stop();Save();};
         store.Changed+=()=>{ if(Dispatcher.CheckAccess()) Changed();else Dispatcher.Invoke(Changed); };
-        SourceInitialized+=(s,e)=>{Native.Round(this);tray=new TrayIcon(this,RestoreFromTray,TrayMenu);};
-        Closed+=(s,e)=>tray?.Dispose();
+        SourceInitialized+=(s,e)=>{
+            Native.Round(this);
+            tray=new TrayIcon(this,RestoreFromTray,TrayMenu);
+            var handle=new WindowInteropHelper(this).Handle;
+            hwndSource=HwndSource.FromHwnd(handle);
+            hwndSource?.AddHook(WndProc);
+            UpdateGlobalHotkey();
+        };
+        Closed+=(s,e)=>{
+            if(hwndSource!=null){Native.UnregisterHotKey(hwndSource.Handle,Native.HotkeyId);hwndSource.RemoveHook(WndProc);}
+            foreach(var n in openNotes.ToList())n.Close();
+            tray?.Dispose();
+        };
         Application.Current.SessionEnding+=(s,e)=>exitRequested=true;
         Loaded+=(s,e)=>{initializing=false;Refresh();QueueSave();if(storage.LoadWarning!=null)Localize(status,TextBox.TextProperty,storage.LoadWarning);};
         Closing+=OnClosing;
     }
-    Brush B(string name)=>(Brush)Resources[name];
+    internal Brush B(string name)=>(Brush)Resources[name];
     void Theme() {
         if(Resources.MergedDictionaries.Count==0) Resources.MergedDictionaries.Add(new ResourceDictionary{Source=new Uri("pack://application:,,,/一件Todo;component/ControlStyles.xaml",UriKind.Absolute)});
         string bg=state.Dark?"#1e2421":"#fbfcf9",card=state.Dark?"#29322c":"#ffffff",fg=state.Dark?"#f0f3ef":"#28382d",muted=state.Dark?"#b3beb5":"#8a978d",line=state.Dark?"#3a463e":"#e5ebe3",accent=state.Dark?"#a1c6a7":"#4f765c",soft=state.Dark?"#303e34":"#edf3e9";
@@ -80,9 +98,10 @@ public sealed partial class MainWindow : Window {
         Resources[typeof(Button)]=button;
         var textbox=new Style(typeof(TextBox));textbox.Setters.Add(new Setter(Control.BackgroundProperty,B("Card")));textbox.Setters.Add(new Setter(Control.ForegroundProperty,B("Fg")));textbox.Setters.Add(new Setter(Control.BorderBrushProperty,B("Line")));textbox.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(10)));textbox.Setters.Add(new Setter(TextBox.CaretBrushProperty,B("Accent")));Resources[typeof(TextBox)]=textbox;
         if(root!=null) { root.Background=B("Bg"); Refresh(); }
+        foreach(var noteWin in openNotes) noteWin.RefreshTheme();
     }
-    SelectableText Text(string value,double size=13,string color="Fg") {var t=new SelectableText{FontSize=size,VerticalAlignment=VerticalAlignment.Center};Localize(t,TextBox.TextProperty,value);t.SetResourceReference(Control.ForegroundProperty,color);return t;}
-    Button Btn(string text,string tooltip,Action action) {var b=new Button{HorizontalContentAlignment=HorizontalAlignment.Center};Localize(b,ContentControl.ContentProperty,text);Localize(b,ToolTipProperty,tooltip);Automation(b,tooltip);b.Click+=(s,e)=>action();return b;}
+    internal SelectableText Text(string value,double size=13,string color="Fg") {var t=new SelectableText{FontSize=size,VerticalAlignment=VerticalAlignment.Center};Localize(t,TextBox.TextProperty,value);t.SetResourceReference(Control.ForegroundProperty,color);return t;}
+    internal Button Btn(string text,string tooltip,Action action) {var b=new Button{HorizontalContentAlignment=HorizontalAlignment.Center};Localize(b,ContentControl.ContentProperty,text);Localize(b,ToolTipProperty,tooltip);Automation(b,tooltip);b.Click+=(s,e)=>action();return b;}
     static void Automation(DependencyObject obj,string name)=>Localize(obj,System.Windows.Automation.AutomationProperties.NameProperty,name);
     void Build() {
         root=new Grid{Background=B("Bg")};root.PreviewMouseLeftButtonDown+=DragWindow;root.RowDefinitions.Add(new RowDefinition());Content=root;
@@ -90,7 +109,7 @@ public sealed partial class MainWindow : Window {
         var main=new Grid();foreach(var h in new[]{GridLength.Auto,GridLength.Auto,GridLength.Auto,new GridLength(1,GridUnitType.Star),GridLength.Auto,GridLength.Auto})main.RowDefinitions.Add(new RowDefinition{Height=h});layout.Children.Add(main);
         var top=new Grid{Margin=new Thickness(22,17,12,0),Height=38};top.ColumnDefinitions.Add(new ColumnDefinition());top.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});main.Children.Add(top);
         var brand=new StackPanel{Orientation=Orientation.Horizontal};var mark=new Border{Background=B("Accent"),CornerRadius=new CornerRadius(8),Width=30,Height=30,Child=new TextBlock{Text="✓",Foreground=B("Bg"),FontSize=22,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center}};brand.Children.Add(mark);brand.Children.Add(Text("一件",17));((FrameworkElement)brand.Children[1]).Margin=new Thickness(10,0,9,0);brand.Children.Add(Text("TODO",10,"Muted"));top.Children.Add(brand);
-        var controls=new StackPanel{Orientation=Orientation.Horizontal};controls.Children.Add(Btn("⚙","设置",Settings));controls.Children.Add(Btn("—","最小化",()=>WindowState=WindowState.Minimized));controls.Children.Add(Btn("✕","关闭",Close));Grid.SetColumn(controls,1);top.Children.Add(controls);
+        var controls=new StackPanel{Orientation=Orientation.Horizontal};controls.Children.Add(Btn("✍","新建便签",OpenNewNote));controls.Children.Add(Btn("⚙","设置",Settings));controls.Children.Add(Btn("—","最小化",()=>WindowState=WindowState.Minimized));controls.Children.Add(Btn("✕","关闭",Close));Grid.SetColumn(controls,1);top.Children.Add(controls);
         var hero=new StackPanel{Margin=new Thickness(28,31,25,24)};Grid.SetRow(hero,1);main.Children.Add(hero);date=Text(DateTime.Now.ToString(state.Language=="en-US"?"MMMM d  dddd":"M月d日  dddd",Strings.Current.Culture),11,"Muted");hero.Children.Add(date);
         poem=Text("山水有清音，\n人间有闲情。",23);poem.FontFamily=new FontFamily("楷体");poem.LineHeight=35;poem.Margin=new Thickness(0,13,0,13);hero.Children.Add(poem);
         try{var catalog=new PoemCatalog(Path.Combine(AppContext.BaseDirectory,"Assets","poem-lines.txt"));var picked=catalog.Pick(state.PreviousPoem);state.PreviousPoem=picked.Index;poem.Text=picked.Text.Replace("，","，\n");}catch(IOException){poem.Text="行到水穷处，\n坐看云起时。";}
@@ -137,7 +156,7 @@ public sealed partial class MainWindow : Window {
         try {state.Tasks=store.Snapshot().Tasks;state.Height=RestoreBounds.Height>0?RestoreBounds.Height:Height;state.Left=Left;state.Top=Top;storage.Save(state);Localize(status,TextBox.TextProperty,"已保存在此设备");return true;}
         catch(Exception e) when(e is IOException or UnauthorizedAccessException) {status.Text=T("保存失败：")+e.Message;return false;}
     }
-    static T? Ancestor<T>(DependencyObject? source) where T:DependencyObject {while(source!=null){if(source is T t)return t;source=VisualTreeHelper.GetParent(source);}return null;}
+    internal static T? Ancestor<T>(DependencyObject? source) where T:DependencyObject {while(source!=null){if(source is T t)return t;source=VisualTreeHelper.GetParent(source);}return null;}
     void TaskClick(object sender,RoutedEventArgs e) {
         var b=Ancestor<ButtonBase>(e.OriginalSource as DependencyObject);if(b?.Tag is not string tag||!tag.Contains(':'))return;var parts=tag.Split(':',2);var item=store.Snapshot().Tasks.FirstOrDefault(t=>t.Id==parts[1]);if(item==null)return;
         switch(parts[0]){case "check":store.Complete(item.Id,!item.Done);break;case "toggle":if(store.Snapshot().Tasks.Any(t=>t.ParentId==item.Id))store.Collapse(item.Id,!item.Collapsed);break;case "menu":Menu(item.Id,b);break;}e.Handled=true;
@@ -173,7 +192,7 @@ public sealed partial class MainWindow : Window {
             overlay.PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Escape){Close();e.Handled=true;}};
         }
         public void ShowDialog(){if(owner.root.Children.Contains(overlay))return;owner.layout.IsHitTestVisible=false;owner.root.Children.Add(overlay);Panel.SetZIndex(overlay,10);overlay.Focus();}
-        public void Close(){owner.root.Children.Remove(overlay);owner.layout.IsHitTestVisible=true;if(previousFocus!=null)Keyboard.Focus(previousFocus);}
+        public void Close(){owner.capturingShortcut=false;owner.root.Children.Remove(overlay);owner.layout.IsHitTestVisible=true;if(previousFocus!=null)Keyboard.Focus(previousFocus);}
     }
     OverlayDialog Dialog(string title,double width,double height)=>new(this,title,width,height);
 
@@ -231,4 +250,110 @@ public sealed partial class MainWindow : Window {
         if(state.CloseToTray&&!exitRequested&&tray?.IsAvailable==true){e.Cancel=true;Hide();return;}
         aiCancellation?.Cancel();
     }
+
+    IntPtr WndProc(IntPtr hwnd,int msg,IntPtr wParam,IntPtr lParam,ref bool handled) {
+        if(msg==Native.WmHotkey&&wParam.ToInt32()==Native.HotkeyId) {
+            if(!capturingShortcut) OpenNewNote();
+            handled=true;
+        } else if(msg==Native.OpenNoteMessage) {
+            OpenNewNote();
+            handled=true;
+        }
+        return IntPtr.Zero;
+    }
+    internal void UpdateGlobalHotkey() {
+        if(hwndSource==null)return;
+        Native.UnregisterHotKey(hwndSource.Handle,Native.HotkeyId);
+        if(TryParseShortcut(state.NoteShortcut,out var key,out var mods)) {
+            uint fsMods=Native.ModNoRepeat;
+            if(mods.HasFlag(ModifierKeys.Alt))fsMods|=Native.ModAlt;
+            if(mods.HasFlag(ModifierKeys.Control))fsMods|=Native.ModControl;
+            if(mods.HasFlag(ModifierKeys.Shift))fsMods|=Native.ModShift;
+            if(mods.HasFlag(ModifierKeys.Windows))fsMods|=Native.ModWin;
+            uint vk=(uint)KeyInterop.VirtualKeyFromKey(key);
+            if(vk!=0) Native.RegisterHotKey(hwndSource.Handle,Native.HotkeyId,fsMods,vk);
+        }
+    }
+    void OnMainWindowPreviewKeyDown(object sender,KeyEventArgs e) {
+        if(capturingShortcut||e.Handled)return;
+        if(MatchesNoteShortcut(e)){e.Handled=true;OpenNewNote();}
+    }
+    internal bool MatchesNoteShortcut(KeyEventArgs e) {
+        if(capturingShortcut)return false;
+        var actualKey=e.Key==Key.System?e.SystemKey:e.Key;
+        if(TryParseShortcut(state.NoteShortcut,out var targetKey,out var targetMods)) {
+            return actualKey==targetKey&&Keyboard.Modifiers==targetMods;
+        }
+        return actualKey==Key.F2&&Keyboard.Modifiers==ModifierKeys.None;
+    }
+    static bool TryParseShortcut(string? shortcutText,out Key key,out ModifierKeys modifiers) {
+        key=Key.F2;modifiers=ModifierKeys.None;
+        if(string.IsNullOrWhiteSpace(shortcutText))return true;
+        var parts=shortcutText.Split('+',StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+        ModifierKeys mods=ModifierKeys.None;
+        Key parsedKey=Key.None;
+        foreach(var part in parts) {
+            if(part.Equals("Ctrl",StringComparison.OrdinalIgnoreCase)||part.Equals("Control",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Control;
+            else if(part.Equals("Alt",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Alt;
+            else if(part.Equals("Shift",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Shift;
+            else if(part.Equals("Win",StringComparison.OrdinalIgnoreCase)||part.Equals("Meta",StringComparison.OrdinalIgnoreCase)||part.Equals("Windows",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Windows;
+            else if(Enum.TryParse<Key>(part,true,out var k))parsedKey=k;
+        }
+        if(parsedKey==Key.None)return false;
+        key=parsedKey;modifiers=mods;return true;
+    }
+    internal static string? FormatShortcutFromKeyEvent(KeyEventArgs e) {
+        var actual=e.Key==Key.System?e.SystemKey:e.Key;
+        if(actual is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin or Key.None)
+            return null;
+        var parts=new List<string>();
+        var mods=Keyboard.Modifiers;
+        if(mods.HasFlag(ModifierKeys.Control))parts.Add("Ctrl");
+        if(mods.HasFlag(ModifierKeys.Alt))parts.Add("Alt");
+        if(mods.HasFlag(ModifierKeys.Shift))parts.Add("Shift");
+        if(mods.HasFlag(ModifierKeys.Windows))parts.Add("Win");
+        parts.Add(actual.ToString());
+        return string.Join("+",parts);
+    }
+    internal string GetNoteImageDirectory() {
+        var dir=state.NoteImageDir?.Trim();
+        if(string.IsNullOrWhiteSpace(dir))dir=Path.Combine(storage.DirectoryPath,"note-images");
+        return Path.GetFullPath(dir);
+    }
+    internal string ResolveNoteImagePath(string storedPath) {
+        if(Path.IsPathRooted(storedPath))return storedPath;
+        return Path.Combine(GetNoteImageDirectory(),storedPath);
+    }
+    internal void OpenNewNote() {
+        if(capturingShortcut)return;
+        var now=DateTime.UtcNow;
+        if((now-lastNoteOpened).TotalMilliseconds<220)return;
+        lastNoteOpened=now;
+        var note=new StickyNote();
+        var offset=(openNotes.Count%6)*26;
+        if(WindowState==WindowState.Normal&&double.IsFinite(Left)&&double.IsFinite(Top)) {
+            note.Left=Left+60+offset;
+            note.Top=Top+60+offset;
+        }
+        state.Notes.Add(note);
+        var win=new NoteWindow(this,note);
+        openNotes.Add(win);
+        win.Show();
+        win.Activate();
+        QueueSave();
+    }
+    internal void DeleteNote(NoteWindow win) {
+        state.Notes.Remove(win.Note);
+        openNotes.Remove(win);
+        win.Close();
+        QueueSave();
+    }
+    internal void OnNoteWindowClosed(NoteWindow win) {
+        openNotes.Remove(win);
+        if(string.IsNullOrWhiteSpace(win.Note.Text)&&win.Note.Images.Count==0) {
+            state.Notes.Remove(win.Note);
+        }
+        QueueSave();
+    }
+    internal void NotifyNoteChanged()=>QueueSave();
 }

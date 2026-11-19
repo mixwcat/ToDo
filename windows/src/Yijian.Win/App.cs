@@ -13,25 +13,36 @@ public sealed class App : Application {
     [STAThread] public static void Main() { var app=new App(); app.Run(); }
     protected override void OnStartup(StartupEventArgs e) {
         base.OnStartup(e);
-        mutex=new Mutex(true,"Local\\YijianTodo-"+Environment.UserName,out var created);
-        if(!created) { Native.ActivateExisting(); Shutdown(); return; }
-        DispatcherUnhandledException+=(s,args)=> { MessageBox.Show(T("操作未完成：")+args.Exception.Message,T("一件 Todo")); args.Handled=true; };
         var root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"YijianTodo");
-        // Optional alternative storage directory; normal launches always use AppData.
-        if(e.Args.Length==2&&e.Args[0]=="--data-dir") root=Path.GetFullPath(e.Args[1]);
-        new MainWindow(new StateStorage(root)).Show();
+        var openNote=false;
+        for(int i=0;i<e.Args.Length;i++) {
+            if(e.Args[i]=="--data-dir"&&i+1<e.Args.Length) root=Path.GetFullPath(e.Args[++i]);
+            else if(e.Args[i]=="--open-note") openNote=true;
+        }
+        mutex=new Mutex(true,"Local\\YijianTodo-"+Environment.UserName,out var created);
+        if(!created) { Native.ActivateExisting(openNote); Shutdown(); return; }
+        DispatcherUnhandledException+=(s,args)=> { MessageBox.Show(T("操作未完成：")+args.Exception.Message,T("一件 Todo")); args.Handled=true; };
+        var win=new MainWindow(new StateStorage(root));
+        win.Show();
+        if(openNote) win.Dispatcher.InvokeAsync(win.OpenNewNote);
     }
     protected override void OnExit(ExitEventArgs e) { mutex?.Dispose(); base.OnExit(e); }
 }
 internal static class Native {
+    public const int WmHotkey=0x0312;
+    public const int HotkeyId=0x2F02;
+    public const uint ModAlt=0x0001,ModControl=0x0002,ModShift=0x0004,ModWin=0x0008,ModNoRepeat=0x4000;
     public static readonly int ActivateMessage=(int)RegisterWindowMessage("YijianTodo.Activate.v1");
+    public static readonly int OpenNoteMessage=(int)RegisterWindowMessage("YijianTodo.OpenNote.v1");
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string name);
     [DllImport("user32.dll")] static extern bool PostMessage(IntPtr h,int message,IntPtr wParam,IntPtr lParam);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr FindWindow(string? cls,string title);
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
     [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h,int cmd);
+    [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hWnd,int id,uint fsModifiers,uint vk);
+    [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hWnd,int id);
     [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd,int attribute,ref int value,int size);
-    public static void ActivateExisting() { var h=FindWindow(null,"一件 Todo"); if(h==IntPtr.Zero)h=FindWindow(null,"Yijian Todo"); if(h!=IntPtr.Zero)PostMessage(h,ActivateMessage,IntPtr.Zero,IntPtr.Zero); }
+    public static void ActivateExisting(bool openNote=false) { var h=FindWindow(null,"一件 Todo"); if(h==IntPtr.Zero)h=FindWindow(null,"Yijian Todo"); if(h!=IntPtr.Zero)PostMessage(h,openNote?OpenNoteMessage:ActivateMessage,IntPtr.Zero,IntPtr.Zero); }
     public static void Round(Window window) { int preference=2; DwmSetWindowAttribute(new WindowInteropHelper(window).Handle,33,ref preference,4); }
 }
 internal static class SecretStore {

@@ -27,6 +27,20 @@ internal static class DesktopTools {
         try{var result=await RunAsync("gdbus",["call","--session","--dest","org.freedesktop.DBus","--object-path","/org/freedesktop/DBus","--method","org.freedesktop.DBus.NameHasOwner","org.kde.StatusNotifierWatcher"],timeoutSeconds:3);return result.Code==0&&result.Output.Contains("true",StringComparison.Ordinal);}
         catch(IOException){return false;}
     }
+    public static void OpenWithDefaultViewer(string filePath) {
+        if(string.IsNullOrWhiteSpace(filePath)||!File.Exists(filePath))throw new FileNotFoundException(T("无法打开图片：")+filePath);
+        try {
+            if(OperatingSystem.IsLinux()) {
+                var start=new ProcessStartInfo("xdg-open"){UseShellExecute=false,CreateNoWindow=true};
+                start.ArgumentList.Add(filePath);
+                Process.Start(start);
+            } else {
+                Process.Start(new ProcessStartInfo(filePath){UseShellExecute=true});
+            }
+        } catch(Exception ex) when(ex is System.ComponentModel.Win32Exception or InvalidOperationException) {
+            throw new IOException(T("无法打开图片：")+ex.Message);
+        }
+    }
 }
 
 internal sealed class SecretStore(string directory) {

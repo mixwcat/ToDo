@@ -2,6 +2,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -29,7 +30,7 @@ public sealed partial class MainWindow {
             layer.Children.Add(frame);layer.KeyDown+=(s,e)=>{if(e.Key==Key.Escape){Close();e.Handled=true;}};
         }
         public void Show(Control content){body.Child=content;owner.layout.IsHitTestVisible=false;owner.root.Children.Add(layer);layer.Focus();}
-        public void Close(){if(!owner.root.Children.Remove(layer))return;owner.layout.IsHitTestVisible=true;previousFocus?.Focus();}
+        public void Close(){owner.capturingShortcut=false;if(!owner.root.Children.Remove(layer))return;owner.layout.IsHitTestVisible=true;previousFocus?.Focus();}
     }
     void Confirm(string title,string text,Action confirmed) {
         var dialog=new Overlay(this,390,350);var panel=new StackPanel{Margin=new Thickness(22),Spacing=16};panel.Children.Add(Label(title,17));panel.Children.Add(Label(text));
@@ -44,16 +45,56 @@ public sealed partial class MainWindow {
         var actions=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,10,0,0)};actions.Children.Add(Btn("取消","取消",dialog.Close));actions.Children.Add(Btn("保存","保存任务",SaveTask,true));panel.Children.Add(actions);dialog.Show(panel);Dispatcher.UIThread.Post(()=>{input.Focus();input.SelectAll();});
     }
     void Settings() {
-        var dialog=new Overlay(this,420,650);var panel=new StackPanel{Margin=new Thickness(25,12,25,20)};panel.Children.Add(Label("偏好设置",19));
+        var dialog=new Overlay(this,420,680);var panel=new StackPanel{Margin=new Thickness(25,12,25,20)};panel.Children.Add(Label("偏好设置",19));
         var caption=Label("界面语言 / Language",11,"Muted");caption.Margin=new Thickness(0,18,0,8);panel.Children.Add(caption);
         var languages=new StackPanel{Orientation=Orientation.Horizontal,Spacing=24,Margin=new Thickness(0,0,0,18)};
         var chinese=new RadioButton{Content="简体中文",GroupName="Language",IsChecked=state.Language=="zh-CN"};var english=new RadioButton{Content="English",GroupName="Language",IsChecked=state.Language=="en-US"};languages.Children.Add(chinese);languages.Children.Add(english);panel.Children.Add(languages);
         var compact=new CheckBox{Content=T("紧凑布局"),IsChecked=state.Compact,Margin=new Thickness(0,0,0,12)};var dark=new CheckBox{Content=T("深色主题"),IsChecked=state.Dark,Margin=new Thickness(0,0,0,22)};panel.Children.Add(compact);panel.Children.Add(dark);
         panel.Children.Add(Label("点击右上角 × 时",12,"Muted"));var exit=new RadioButton{Content=T("退出程序"),GroupName="CloseAction",IsChecked=!state.CloseToTray,Margin=new Thickness(0,10,0,9)};var toTray=new RadioButton{Content=T("最小化到托盘"),GroupName="CloseAction",IsChecked=state.CloseToTray,Margin=new Thickness(0,0,0,16)};panel.Children.Add(exit);panel.Children.Add(toTray);
-        var configure=Btn("AI 配置","AI 配置",()=>{dialog.Close();_=AiSettingsAsync();},true);configure.HorizontalAlignment=HorizontalAlignment.Left;panel.Children.Add(configure);
-        var files=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,16,0,12)};files.Children.Add(Btn("导出任务","导出任务",()=>_ = ExportAsync()));files.Children.Add(Btn("导入任务","导入任务",()=>{dialog.Close();_=ImportAsync();}));panel.Children.Add(files);
-        var actions=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};actions.Children.Add(Btn("恢复默认设置","恢复默认设置",()=>{chinese.IsChecked=true;dark.IsChecked=false;compact.IsChecked=false;exit.IsChecked=true;}));
-        actions.Children.Add(Btn("保存","保存设置",()=>{state.Dark=dark.IsChecked==true;state.Compact=compact.IsChecked==true;state.CloseToTray=toTray.IsChecked==true;ApplyLanguage(english.IsChecked==true?"en-US":"zh-CN");ApplyTheme();QueueSave();dialog.Close();},true));panel.Children.Add(actions);dialog.Show(new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});
+
+        var shortcutLabel=Label("打开便签快捷键",11,"Muted");shortcutLabel.Margin=new Thickness(0,4,0,6);panel.Children.Add(shortcutLabel);
+        var shortcutBox=new TextBox{Text=string.IsNullOrWhiteSpace(state.NoteShortcut)?"F2":state.NoteShortcut,IsReadOnly=true,Watermark=T("点击后按下快捷键…"),Margin=new Thickness(0,0,0,12)};
+        shortcutBox.GotFocus+=(s,e)=>capturingShortcut=true;
+        shortcutBox.LostFocus+=(s,e)=>capturingShortcut=false;
+        shortcutBox.AddHandler(KeyDownEvent,(s,e)=>{
+            if(e.Key==Key.Tab)return;
+            if(e.Key==Key.Escape){this.Focus();e.Handled=true;return;}
+            var formatted=FormatShortcutFromKeyEvent(e);
+            if(!string.IsNullOrEmpty(formatted)){shortcutBox.Text=formatted;}
+            e.Handled=true;
+        },RoutingStrategies.Tunnel);
+        panel.Children.Add(shortcutBox);
+
+        var imgDirLabel=Label("便签图片保存路径",11,"Muted");imgDirLabel.Margin=new Thickness(0,0,0,6);panel.Children.Add(imgDirLabel);
+        var imgDirGrid=new Grid{ColumnDefinitions=new ColumnDefinitions("*,Auto"),Margin=new Thickness(0,0,0,16)};
+        var imgDirBox=new TextBox{Text=GetNoteImageDirectory(),Margin=new Thickness(0,0,8,0)};
+        var browseBtn=Btn("浏览…","选择图片保存目录",async()=>{
+            try {
+                var folders=await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{Title=T("选择图片保存目录"),AllowMultiple=false});
+                if(folders.Count>0){
+                    var local=folders[0].TryGetLocalPath();
+                    if(!string.IsNullOrWhiteSpace(local))imgDirBox.Text=local;
+                }
+            } catch(Exception ex) { ReportError(ex.Message); }
+        },true);
+        Place(imgDirGrid,imgDirBox,0,0);Place(imgDirGrid,browseBtn,0,1);panel.Children.Add(imgDirGrid);
+
+        var configure=Btn("AI 配置","AI 配置",()=>{capturingShortcut=false;dialog.Close();_=AiSettingsAsync();},true);configure.HorizontalAlignment=HorizontalAlignment.Left;panel.Children.Add(configure);
+        var files=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,16,0,12)};files.Children.Add(Btn("导出任务","导出任务",()=>_ = ExportAsync()));files.Children.Add(Btn("导入任务","导入任务",()=>{capturingShortcut=false;dialog.Close();_=ImportAsync();}));panel.Children.Add(files);
+        var actions=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};
+        var defaultImgDir=Path.Combine(storage.DirectoryPath,"note-images");
+        actions.Children.Add(Btn("恢复默认设置","恢复默认设置",()=>{chinese.IsChecked=true;dark.IsChecked=false;compact.IsChecked=false;exit.IsChecked=true;shortcutBox.Text="F2";imgDirBox.Text=defaultImgDir;}));
+        actions.Children.Add(Btn("保存","保存设置",()=>{
+            capturingShortcut=false;
+            state.Dark=dark.IsChecked==true;state.Compact=compact.IsChecked==true;state.CloseToTray=toTray.IsChecked==true;
+            var nextShortcut=shortcutBox.Text?.Trim();
+            state.NoteShortcut=string.IsNullOrWhiteSpace(nextShortcut)?"F2":nextShortcut;
+            UpdateGlobalHotkey();
+            var nextDir=imgDirBox.Text?.Trim()??"";
+            if(!string.IsNullOrWhiteSpace(nextDir)){try{Directory.CreateDirectory(nextDir);state.NoteImageDir=Path.GetFullPath(nextDir);}catch(Exception ex){ReportError(ex.Message);return;}}
+            else state.NoteImageDir="";
+            ApplyLanguage(english.IsChecked==true?"en-US":"zh-CN");ApplyTheme();QueueSave();dialog.Close();
+        },true));panel.Children.Add(actions);dialog.Show(new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});
     }
     async Task AiSettingsAsync() {
         string? loadError=null;try{await EnsureKeyAsync();}catch(IOException ex){loadError=ex.Message;}
