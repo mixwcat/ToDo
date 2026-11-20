@@ -41,6 +41,71 @@ internal static class DesktopTools {
             throw new IOException(T("无法打开图片：")+ex.Message);
         }
     }
+
+    public static async Task<byte[]?> TryReadLinuxClipboardImageBytesAsync() {
+        if(!OperatingSystem.IsLinux())return null;
+        string[] mimeCandidates=["image/png","image/jpeg","image/bmp","image/webp","image/gif"];
+        if(!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))) {
+            try {
+                var (_,typesOut)=await RunBestEffortTextAsync("wl-paste",["--list-types"],timeoutSeconds:2);
+                if(!string.IsNullOrWhiteSpace(typesOut)) {
+                    var available=typesOut.Split(['\r','\n'],StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+                    foreach(var mime in mimeCandidates) {
+                        if(available.Any(x=>x.Equals(mime,StringComparison.OrdinalIgnoreCase))) {
+                            var bytes=await RunBestEffortBytesAsync("wl-paste",["--no-newline","--type",mime],timeoutSeconds:3);
+                            if(bytes is {Length:>0})return bytes;
+                        }
+                    }
+                }
+            } catch { }
+        }
+        try {
+            var (code,targetsOut)=await RunBestEffortTextAsync("xclip",["-selection","clipboard","-t","TARGETS","-o"],timeoutSeconds:2);
+            if(code==0&&!string.IsNullOrWhiteSpace(targetsOut)) {
+                var available=targetsOut.Split(['\r','\n'],StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
+                foreach(var mime in mimeCandidates) {
+                    if(available.Any(x=>x.Equals(mime,StringComparison.OrdinalIgnoreCase))) {
+                        var bytes=await RunBestEffortBytesAsync("xclip",["-selection","clipboard","-t",mime,"-o"],timeoutSeconds:3);
+                        if(bytes is {Length:>0})return bytes;
+                    }
+                }
+            }
+        } catch { }
+        return null;
+    }
+
+    static async Task<(int Code,string Output)> RunBestEffortTextAsync(string name,IEnumerable<string> args,int timeoutSeconds) {
+        var start=new ProcessStartInfo(name){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
+        foreach(var arg in args)start.ArgumentList.Add(arg);
+        using var process=new Process{StartInfo=start};
+        try{if(!process.Start())return(-1,"");}catch{return(-1,"");}
+        using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+        try {
+            var output=await process.StandardOutput.ReadToEndAsync(deadline.Token);
+            await process.WaitForExitAsync(deadline.Token);
+            return(process.ExitCode,output);
+        } catch {
+            try{process.Kill(entireProcessTree:true);}catch{}
+            return(-1,"");
+        }
+    }
+
+    static async Task<byte[]?> RunBestEffortBytesAsync(string name,IEnumerable<string> args,int timeoutSeconds) {
+        var start=new ProcessStartInfo(name){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true};
+        foreach(var arg in args)start.ArgumentList.Add(arg);
+        using var process=new Process{StartInfo=start};
+        try{if(!process.Start())return null;}catch{return null;}
+        using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+        try {
+            using var ms=new MemoryStream();
+            await process.StandardOutput.BaseStream.CopyToAsync(ms,deadline.Token);
+            await process.WaitForExitAsync(deadline.Token);
+            return process.ExitCode==0&&ms.Length>0?ms.ToArray():null;
+        } catch {
+            try{process.Kill(entireProcessTree:true);}catch{}
+            return null;
+        }
+    }
 }
 
 internal sealed class SecretStore(string directory) {

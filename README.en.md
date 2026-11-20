@@ -12,7 +12,7 @@ Windows uses C# / .NET 8 / WPF; Ubuntu uses C# / .NET 8 / Avalonia 11. Both inte
 
 Current version: **v0.1.3**. All downloads below target x86-64. The full edition is recommended for most users.
 
-v0.1.3 adds **Sticky Notes** to both Windows and Ubuntu: press `F2` (including global hotkey support when unfocused) or click the top `✍` button to open multiple draggable sticky note windows, type text and paste images or image paths with `Ctrl+V`, customize the note shortcut and image save directory in Settings, and double-click any pasted image to open it in the system's default image viewer. See the [changelog](CHANGELOG.md).
+v0.1.3 adds **Sticky Notes** to both Windows and Ubuntu: press `F2` (including global hotkey support when unfocused) or click the top `✍` button to open multiple draggable sticky note windows, type text and paste clipboard bitmaps, image files, HTML images, or local image paths with `Ctrl+V`; note text and images stay in memory only without automatic disk persistence, clicking `✕` closes and discards the note while cleaning up temporary preview files, `💾` or `Ctrl+S` exports the note and its images as Markdown (`.md`), the note shortcut can be customized in Settings, and double-clicking any pasted image opens it in the system's default image viewer. See the [changelog](CHANGELOG.md).
 
 | Platform | Full: includes the .NET runtime | Lite: uses the system .NET runtime |
 |---|---|---|
@@ -32,7 +32,7 @@ The Lite edition requires [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.
 Open a terminal in your download directory and install the full edition:
 
 ```bash
-sudo apt install ./YijianTodo-0.1.2-ubuntu-amd64.deb
+sudo apt install ./YijianTodo-0.1.3-ubuntu-amd64.deb
 ```
 
 Launch it from the applications menu or run `yijian-todo`. Program files are installed under `/usr/lib/yijian-todo`.
@@ -61,7 +61,7 @@ Linux v0.1.2 includes [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/
 - **Completion rules:** completing a parent completes all its descendants. Reopening a child reopens its ancestors. Completed tasks appear below unfinished tasks, with the most recently completed first under each parent.
 - **Completed task visibility:** use the toggle beside “My tasks” to show or hide completed items.
 - **Desktop controls:** dark theme, compact layout, window dragging, tray integration, and a single running instance. Choose whether the close button quits or hides the application to the tray.
-- **Sticky notes:** press the configured shortcut (defaults to `F2`, with global hotkey support when unfocused and `--open-note` CLI support) or click `✍` in the header to open multiple independent, draggable sticky note windows. Type text and paste clipboard bitmaps, image files, or local image file paths with `Ctrl+V`. Configure the shortcut key and image save directory in Settings, and double-click any image in a note to open it with the system's default image viewer.
+- **Sticky notes:** press the configured shortcut (defaults to `F2`, with global hotkey support when unfocused and `--open-note` CLI support) or click `✍` in the header to open multiple independent, draggable sticky note windows. Type text and paste clipboard bitmaps, image files, HTML images (`data:image` / `file://`), or local image paths with `Ctrl+V` (Ubuntu also falls back to `wl-paste` / `xclip`). Note text and images stay in memory only without automatic disk persistence—clicking `✕` closes and discards the note while cleaning up temporary preview files. Click `💾` (or press `Ctrl+S`) to save the note as a `.md` file, exporting any pasted images alongside it with Markdown image links. Configure the note shortcut in Settings, and double-click any image in a note to preview it in the system's default image viewer.
 - **Chinese and English:** select the interface language in Settings and save to apply immediately. Task titles, existing conversations, and poems retain their original text.
 - **Poetry on startup:** each launch selects a couplet of five- or seven-character Chinese verse. A byte index allows reading one entry without loading the entire corpus into memory.
 - **Local data:** tasks save automatically. Import and export JSON to transfer tasks between platforms; automatic cloud synchronization is not included.
@@ -76,7 +76,7 @@ Click “Chat with AI” to expand the right panel. Open **AI configuration** fr
 - The AI can list, create, edit, move, complete, and delete tasks. Task editing requires function/tool calling support from the service and model.
 - Task information and conversation content are sent to your configured AI service as part of requests. Everyday task management works without configuring AI.
 
-API keys stay in memory for the current session by default. If you enable “Remember key,” Windows uses DPAPI encryption and Ubuntu uses the system Secret Service keyring. Keys are never included in task JSON, and an unavailable keyring does not trigger a plaintext fallback. Conversations are not saved to disk when the application closes.
+API keys stay in memory for the current session by default. If you enable “Remember key,” Windows uses DPAPI encryption and Ubuntu uses the system Secret Service keyring. Keys are never included in task JSON, and an unavailable keyring does not trigger a plaintext fallback. Conversations and sticky notes stay in memory only and are not saved to disk when closed (notes can be exported as Markdown via Save as).
 
 ## Data locations
 
@@ -97,14 +97,15 @@ The full Ubuntu edition installs approximately 95 MB of application files, inclu
 ToDo/
 ├── README.md                 # Chinese documentation
 ├── README.en.md              # English documentation
+├── CHANGELOG.md              # Release changelog
 ├── YijianTodo.sln
 ├── build-release.ps1         # Four installers, checksums, and release notes
 ├── windows/                  # WPF interface and Windows installer
 ├── ubuntu/                   # Avalonia interface and Ubuntu packaging scripts
 ├── shared/
-│   ├── Yijian.Core/           # Tasks, AI, storage, and translations
+│   ├── Yijian.Core/          # Tasks, AI, storage, and translations
 │   └── Assets/               # Icons, poetry corpus, and byte index
-├── prototype/                # HTML prototype
+├── tools/                    # Windows source quick-launch scripts
 └── .github/workflows/        # Build configuration for both platforms
 ```
 
@@ -192,4 +193,4 @@ GitHub Actions provides builds for both platforms and accepts a version when tri
 
 Shared translations live in `Strings.cs` and `Resources/en-US.json`. Ubuntu separates the main window, task list, chat, dialogs, and Linux platform services. General settings and AI configuration use separate panels. Lists use virtualization, chat and AI history are bounded, and the save timer runs only after changes. Single-instance activation uses local named pipes rather than a TCP port. The poetry corpus is stored as binary bytes in Git so line-ending conversion cannot invalidate its index.
 
-Build both projects with `dotnet build YijianTodo.sln -c Release`. Both projects have been compiled on Windows. Validation includes Avalonia headless interactions with isolated data, a local mock AI service, and installer integrity checks. Version 0.1.1 also passes 38 shared-core and headless UI checks for repeated undo. Actual installation and uninstallation, as well as tray behavior, keyring integration, and performance on a real Ubuntu desktop, still need device testing. The user verified the v0.1.2 window dragging fix on an Ubuntu desktop.
+Build both projects with `dotnet build YijianTodo.sln -c Release`. Both projects have been compiled on Windows. Validation includes Avalonia headless interactions with isolated data, a local mock AI service, installer integrity checks, and WSL2 (Ubuntu 24.04) verification of the Linux package startup, legacy note cleanup, and memory-only sticky note behavior. Version 0.1.1 also passes 38 shared-core and headless UI checks for repeated undo. Actual installation and uninstallation, as well as tray behavior, keyring integration, and performance on a real Ubuntu desktop, still need device testing. The user verified the v0.1.2 window dragging fix on an Ubuntu desktop.

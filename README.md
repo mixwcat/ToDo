@@ -12,7 +12,7 @@ Windows 使用 C# / .NET 8 / WPF；Ubuntu 使用 C# / .NET 8 / Avalonia 11。两
 
 当前版本：**v0.1.3**。以下安装包均为 x86-64，普通用户推荐选择完整版。
 
-v0.1.3 为 Windows 与 Ubuntu 同步新增**小便签**功能：支持按快捷键（默认 `F2`，含窗口失焦时全局触发）或点击主界面顶部 `✍` 按钮打开多个可自由拖拽的便签窗口，支持输入文字与 `Ctrl+V` 粘贴图片/图片路径，可在设置中自定义便签打开快捷键与图片保存路径，并支持双击便签中的图片调用系统默认图片查看器打开。详见[版本记录](CHANGELOG.md)。
+v0.1.3 为 Windows 与 Ubuntu 同步新增**小便签**功能：支持按快捷键（默认 `F2`，含窗口失焦时全局触发）或点击主界面顶部 `✍` 按钮打开多个可自由拖拽的便签窗口，支持输入文字与 `Ctrl+V` 粘贴剪贴板位图/图片文件/HTML 图片/本地图片路径；便签内容与图片仅保留在内存中不自动落盘，点击 `✕` 关闭即删除便签并清理预览临时文件，点击 `💾` 或按 `Ctrl+S` 可将便签及图片导出另存为 Markdown（`.md`），可在设置中自定义打开便签快捷键，双击图片可调用系统默认图片查看器预览。详见[版本记录](CHANGELOG.md)。
 
 | 系统 | 完整版：自带 .NET 运行时 | 精简版：使用系统 .NET 运行时 |
 |---|---|---|
@@ -31,7 +31,9 @@ Linux v0.1.2 提供 [SHA256SUMS.txt](https://github.com/mixwcat/ToDo/releases/do
 ToDo/
 ├── README.md
 ├── README.en.md             # English documentation
+├── CHANGELOG.md             # 版本记录
 ├── YijianTodo.sln
+├── build-release.ps1        # 一键构建两端安装包与校验文件
 ├── windows/                 # Windows / WPF
 │   ├── build.ps1
 │   └── src/Yijian.Win/
@@ -43,7 +45,7 @@ ToDo/
 ├── shared/
 │   ├── Yijian.Core/         # 两端唯一的共用核心源码
 │   └── Assets/              # 图标、五言七言诗库和字节索引
-├── prototype/               # 原 HTML 原型
+├── tools/                   # Windows 源码快速启动脚本
 └── .github/workflows/       # Windows、Ubuntu 构建与产物归档
 ```
 
@@ -56,7 +58,7 @@ ToDo/
 - 点击任务文字或右侧三角展开、收起子任务；拖动左侧手柄调整同级未完成任务顺序。
 - 完成主任务同时完成全部子任务；取消完成子任务会重新打开祖先。完成项排在未完成项之后，同级完成项按最近完成优先排列。
 - “我的任务”右侧切换显示已完成任务。支持紧凑布局、深色主题、窗口拖动与托盘。
-- **小便签**：按快捷键（默认 `F2`，支持窗口失焦时的全局快捷键及 `--open-note` 启动参数）或点击顶部 `✍` 按钮可打开多个独立便签窗口；便签窗口可自由拖拽与调整尺寸，支持输入文字及 `Ctrl+V` 粘贴剪贴板图片、图片文件或本地图片路径；偏好设置中可自定义打开便签的快捷按键与图片保存路径；双击便签中的图片即可使用系统默认图片查看器打开。
+- **小便签**：按快捷键（默认 `F2`，支持窗口失焦时的全局快捷键及 `--open-note` 启动参数）或点击顶部 `✍` 按钮可打开多个独立便签窗口；便签窗口可自由拖拽与调整尺寸，支持输入文字及 `Ctrl+V` 粘贴剪贴板位图、图片文件、HTML 图片（`data:image` / `file://`）或本地图片路径（Ubuntu 端额外支持 `wl-paste` / `xclip` 回退）。便签内容与图片仅保留在内存中不自动写入磁盘，点击 `✕` 关闭即销毁便签并清理预览临时文件；点击 `💾`（或按 `Ctrl+S`）可将便签另存为 `.md` 文件，同时把图片导出到同级目录并生成 Markdown 图片链接。偏好设置中支持自定义打开便签的快捷键；双击便签中的图片即可生成临时预览文件并用系统默认图片查看器打开。
 - 设置中选择简体中文或 English，保存后立即生效；保留任务、诗句、对话和草稿。任务标题与已有对话不做自动翻译。
 - 每次启动从本地诗库随机读取一联五言或七言诗。通过小索引读取单条，不把整个诗库载入内存；英文界面保留诗句原文。
 - “与 AI 对话”展开右侧任务伙伴。通用设置只保留“AI 配置”按钮，点击打开独立配置面板；聊天面板齿轮也可直接进入。
@@ -101,13 +103,13 @@ cd ToDo
 
 ### 安装 .deb
 
-从 [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest) 下载 `YijianTodo-0.1.2-ubuntu-amd64.deb`，自带 .NET 运行时，在下载目录执行：
+从 [GitHub Releases](https://github.com/mixwcat/ToDo/releases/latest) 下载 `YijianTodo-0.1.3-ubuntu-amd64.deb`，自带 .NET 运行时，在下载目录执行：
 
 ```bash
-sudo apt install ./YijianTodo-0.1.2-ubuntu-amd64.deb
+sudo apt install ./YijianTodo-0.1.3-ubuntu-amd64.deb
 ```
 
-需要共用系统 .NET 时选择 `YijianTodo-0.1.2-ubuntu-amd64-lite.deb`。它声明 `dotnet-runtime-8.0` 依赖，需要系统软件源提供该包；Ubuntu 上使用的是 .NET Runtime，不需要 Windows Desktop Runtime。完整版和精简版是同一个软件包的两种构建，选择一种安装即可。
+需要共用系统 .NET 时选择 `YijianTodo-0.1.3-ubuntu-amd64-lite.deb`。它声明 `dotnet-runtime-8.0` 依赖，需要系统软件源提供该包；Ubuntu 上使用的是 .NET Runtime，不需要 Windows Desktop Runtime。完整版和精简版是同一个软件包的两种构建，选择一种安装即可。
 
 安装后从应用菜单启动，或执行 `yijian-todo`。软件安装在 `/usr/lib/yijian-todo`，任务仍保存在用户数据目录。卸载使用 `sudo apt remove yijian-todo`，保留用户任务及密钥环记录。
 
@@ -199,7 +201,7 @@ python ubuntu/build-deb.py --version 0.1.2 --lite
 | Windows | `%LOCALAPPDATA%\YijianTodo\state.json` | 同目录 `key.dpapi`，Windows DPAPI 加密 |
 | Ubuntu | `$XDG_DATA_HOME/yijian-todo/state.json`，默认 `~/.local/share/yijian-todo/state.json` | 系统 Secret Service 密钥环，经 `secret-tool` 访问 |
 
-默认仅在本次运行中使用 Key。Ubuntu 选择记住 Key 时需要 `libsecret-tools` 和已解锁的桌面密钥环；不会将 Key 降级写入明文文件。两端的 JSON 均不包含 Key。对话仅在当前运行期间保留，关闭应用后不写入磁盘。
+默认仅在本次运行中使用 Key。Ubuntu 选择记住 Key 时需要 `libsecret-tools` 和已解锁的桌面密钥环；不会将 Key 降级写入明文文件。两端的 JSON 均不包含 Key。对话与小便签内容均仅在内存中保留，关闭后不写入磁盘（小便签可通过“另存为”导出为 Markdown）；启动加载时会自动清理历史残留的本地便签数据与 `note-images` 目录。
 
 保存使用临时文件和上次备份；原始损坏文件保留后尝试读取备份。应用目录迁移或更新不覆盖用户目录中的任务。可用 `--data-dir /absolute/path` 指定独立数据目录。
 
@@ -211,4 +213,4 @@ python ubuntu/build-deb.py --version 0.1.2 --lite
 
 可用 `dotnet build YijianTodo.sln -c Release` 编译两端；根目录 GitHub Actions 分别生成 Windows 与 Ubuntu 构建产物。诗库文本按二进制字节保存，避免 Git 换行转换破坏字节索引。
 
-当前已在 Windows 编译两个平台项目，完成隔离数据下的 Avalonia 无界面交互、本地模拟 AI 检查及安装包完整性校验；v0.1.1 的连续撤销通过 38 项核心与界面检查。实际安装、卸载，以及真实 Ubuntu 桌面的托盘、密钥环和性能仍待实机验证；v0.1.2 已由用户在 Ubuntu 实机验证窗口拖动修复。
+当前已在 Windows 编译两个平台项目，完成隔离数据下的 Avalonia 无界面交互、本地模拟 AI 检查及安装包完整性校验，并在 WSL2（Ubuntu 24.04）中验证了 Linux 发布包的运行、历史便签清理及无本地落盘行为；v0.1.1 的连续撤销通过 38 项核心与界面检查。实际安装、卸载，以及真实 Ubuntu 桌面的托盘、密钥环和性能仍待实机验证；v0.1.2 已由用户在 Ubuntu 实机验证窗口拖动修复。

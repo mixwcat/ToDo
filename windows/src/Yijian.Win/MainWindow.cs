@@ -59,7 +59,7 @@ public sealed partial class MainWindow : Window {
 
     public MainWindow(StateStorage storage) {
         this.storage=storage;state=storage.Load();state.Language=state.Language=="en-US"?"en-US":"zh-CN";Strings.Current.SetLanguage(state.Language);
-        if(string.IsNullOrWhiteSpace(state.NoteShortcut))state.NoteShortcut="F2";
+        if(string.IsNullOrWhiteSpace(state.NoteShortcut)||!TryParseShortcut(state.NoteShortcut,out _,out _))state.NoteShortcut="F2";
         store=new TaskStore(state.Tasks);key=state.RememberKey?SecretStore.Read(storage.DirectoryPath):"";
         Icon=System.Windows.Media.Imaging.BitmapFrame.Create(new Uri(Path.Combine(AppContext.BaseDirectory,"Assets","app.ico")));Localize(this,TitleProperty,"一件 Todo");Width=420;Height=Math.Clamp(state.Height,560,SystemParameters.WorkArea.Height);MinWidth=380;MinHeight=560;
         WindowStyle=WindowStyle.None;ResizeMode=ResizeMode.CanResize;FontFamily=new FontFamily("Microsoft YaHei UI");FontSize=13;UseLayoutRounding=true;
@@ -280,13 +280,22 @@ public sealed partial class MainWindow : Window {
     }
     internal bool MatchesNoteShortcut(KeyEventArgs e) {
         if(capturingShortcut)return false;
-        var actualKey=e.Key==Key.System?e.SystemKey:e.Key;
+        var actualKey=ResolveShortcutKey(e);
         if(TryParseShortcut(state.NoteShortcut,out var targetKey,out var targetMods)) {
             return actualKey==targetKey&&Keyboard.Modifiers==targetMods;
         }
         return actualKey==Key.F2&&Keyboard.Modifiers==ModifierKeys.None;
     }
-    static bool TryParseShortcut(string? shortcutText,out Key key,out ModifierKeys modifiers) {
+    // An active IME reports the physical key through ImeProcessedKey (e.g. ` arrives as ImeProcessed).
+    static Key ResolveShortcutKey(KeyEventArgs e)=>e.Key switch {
+        Key.System=>e.SystemKey,
+        Key.ImeProcessed=>e.ImeProcessedKey,
+        Key.DeadCharProcessed=>e.DeadCharProcessedKey,
+        _=>e.Key
+    };
+    static bool IsUsableShortcutKey(Key key)=>key is not (Key.None or Key.ImeProcessed or Key.DeadCharProcessed or Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin);
+    static string ShortcutKeyName(Key key)=>key==Key.Oem3?"`":key.ToString();
+    internal static bool TryParseShortcut(string? shortcutText,out Key key,out ModifierKeys modifiers) {
         key=Key.F2;modifiers=ModifierKeys.None;
         if(string.IsNullOrWhiteSpace(shortcutText))return true;
         var parts=shortcutText.Split('+',StringSplitOptions.RemoveEmptyEntries|StringSplitOptions.TrimEntries);
@@ -297,63 +306,41 @@ public sealed partial class MainWindow : Window {
             else if(part.Equals("Alt",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Alt;
             else if(part.Equals("Shift",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Shift;
             else if(part.Equals("Win",StringComparison.OrdinalIgnoreCase)||part.Equals("Meta",StringComparison.OrdinalIgnoreCase)||part.Equals("Windows",StringComparison.OrdinalIgnoreCase))mods|=ModifierKeys.Windows;
+            else if(part=="`")parsedKey=Key.Oem3;
             else if(Enum.TryParse<Key>(part,true,out var k))parsedKey=k;
         }
-        if(parsedKey==Key.None)return false;
+        if(!IsUsableShortcutKey(parsedKey))return false;
         key=parsedKey;modifiers=mods;return true;
     }
     internal static string? FormatShortcutFromKeyEvent(KeyEventArgs e) {
-        var actual=e.Key==Key.System?e.SystemKey:e.Key;
-        if(actual is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin or Key.None)
-            return null;
+        var actual=ResolveShortcutKey(e);
+        if(!IsUsableShortcutKey(actual))return null;
         var parts=new List<string>();
         var mods=Keyboard.Modifiers;
         if(mods.HasFlag(ModifierKeys.Control))parts.Add("Ctrl");
         if(mods.HasFlag(ModifierKeys.Alt))parts.Add("Alt");
         if(mods.HasFlag(ModifierKeys.Shift))parts.Add("Shift");
         if(mods.HasFlag(ModifierKeys.Windows))parts.Add("Win");
-        parts.Add(actual.ToString());
+        parts.Add(ShortcutKeyName(actual));
         return string.Join("+",parts);
-    }
-    internal string GetNoteImageDirectory() {
-        var dir=state.NoteImageDir?.Trim();
-        if(string.IsNullOrWhiteSpace(dir))dir=Path.Combine(storage.DirectoryPath,"note-images");
-        return Path.GetFullPath(dir);
-    }
-    internal string ResolveNoteImagePath(string storedPath) {
-        if(Path.IsPathRooted(storedPath))return storedPath;
-        return Path.Combine(GetNoteImageDirectory(),storedPath);
     }
     internal void OpenNewNote() {
         if(capturingShortcut)return;
         var now=DateTime.UtcNow;
         if((now-lastNoteOpened).TotalMilliseconds<220)return;
         lastNoteOpened=now;
-        var note=new StickyNote();
+        double left=double.NaN,top=double.NaN;
         var offset=(openNotes.Count%6)*26;
         if(WindowState==WindowState.Normal&&double.IsFinite(Left)&&double.IsFinite(Top)) {
-            note.Left=Left+60+offset;
-            note.Top=Top+60+offset;
+            left=Left+60+offset;
+            top=Top+60+offset;
         }
-        state.Notes.Add(note);
-        var win=new NoteWindow(this,note);
+        var win=new NoteWindow(this,left,top);
         openNotes.Add(win);
         win.Show();
         win.Activate();
-        QueueSave();
-    }
-    internal void DeleteNote(NoteWindow win) {
-        state.Notes.Remove(win.Note);
-        openNotes.Remove(win);
-        win.Close();
-        QueueSave();
     }
     internal void OnNoteWindowClosed(NoteWindow win) {
         openNotes.Remove(win);
-        if(string.IsNullOrWhiteSpace(win.Note.Text)&&win.Note.Images.Count==0) {
-            state.Notes.Remove(win.Note);
-        }
-        QueueSave();
     }
-    internal void NotifyNoteChanged()=>QueueSave();
 }

@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -10,7 +12,6 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Yijian.Core;
 using Yijian.Ubuntu.Platform;
@@ -20,32 +21,35 @@ namespace Yijian.Ubuntu;
 
 public sealed class NoteWindow : Window {
     static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
+
+    sealed class PastedImage {
+        public required byte[] Bytes { get; init; }
+        public required string Extension { get; init; }
+        public string? TempPreviewPath { get; set; }
+    }
+
     readonly MainWindow owner;
-    readonly StickyNote note;
+    readonly List<PastedImage> images = [];
     readonly StackPanel imagesPanel;
     readonly TextBox editor;
     readonly SelectableTextBlock hintLabel;
     readonly Border outerBorder;
-    bool initialized;
     bool isPasting;
     DateTime lastPasteTime = DateTime.MinValue;
 
-    public StickyNote Note => note;
-
-    public NoteWindow(MainWindow owner, StickyNote note) {
+    public NoteWindow(MainWindow owner, double initialLeft = double.NaN, double initialTop = double.NaN) {
         this.owner = owner;
-        this.note = note;
-        Width = double.IsFinite(note.Width) && note.Width >= 220 ? Math.Clamp(note.Width, 220, 900) : 320;
-        Height = double.IsFinite(note.Height) && note.Height >= 220 ? Math.Clamp(note.Height, 220, 900) : 340;
+        Width = 320;
+        Height = 340;
         MinWidth = 220;
         MinHeight = 220;
         SystemDecorations = SystemDecorations.None;
         CanResize = true;
-        WindowStartupLocation = double.IsFinite(note.Left) && double.IsFinite(note.Top)
+        WindowStartupLocation = double.IsFinite(initialLeft) && double.IsFinite(initialTop)
             ? WindowStartupLocation.Manual
             : WindowStartupLocation.CenterScreen;
-        if (double.IsFinite(note.Left) && double.IsFinite(note.Top)) {
-            Position = new PixelPoint((int)note.Left, (int)note.Top);
+        if (double.IsFinite(initialLeft) && double.IsFinite(initialTop)) {
+            Position = new PixelPoint((int)initialLeft, (int)initialTop);
         }
         Icon = owner.Icon;
         MainWindow.Localize(this, TitleProperty, "小便签");
@@ -98,7 +102,7 @@ public sealed class NoteWindow : Window {
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
         actions.Children.Add(owner.Btn("＋", "新建便签", () => owner.OpenNewNote()));
         actions.Children.Add(owner.Btn("🖼", "粘贴图片", () => _ = TryPasteImageAsync(reportWhenEmpty: true)));
-        actions.Children.Add(owner.Btn("🗑", "删除便签", () => owner.DeleteNote(this)));
+        actions.Children.Add(owner.Btn("💾", "另存为", () => _ = SaveNoteAsAsync()));
         actions.Children.Add(owner.Btn("✕", "关闭便签", Close));
         MainWindow.Place(header, actions, 0, 1);
         MainWindow.Place(main, header, 0);
@@ -106,7 +110,6 @@ public sealed class NoteWindow : Window {
         // Body: text input + pasted images inside a scrollable area
         var bodyStack = new StackPanel { Spacing = 10, Margin = new Thickness(14, 4, 14, 8) };
         editor = new TextBox {
-            Text = note.Text,
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
             MinHeight = 110,
@@ -114,12 +117,8 @@ public sealed class NoteWindow : Window {
         };
         MainWindow.Localize(editor, TextBox.WatermarkProperty, "输入文字，或按 Ctrl+V 粘贴图片…");
         MainWindow.Localize(editor, AutomationProperties.NameProperty, "小便签");
-        editor.TextChanged += (s, e) => {
-            if (!initialized) return;
-            note.Text = editor.Text ?? "";
-            owner.NotifyNoteChanged();
-        };
         editor.PastingFromClipboard += OnEditorPastingFromClipboard;
+        AttachEditorContextMenu();
         bodyStack.Children.Add(editor);
 
         imagesPanel = new StackPanel { Spacing = 10 };
@@ -133,7 +132,7 @@ public sealed class NoteWindow : Window {
         MainWindow.Place(main, scroll, 1);
 
         // Footer hint / status
-        hintLabel = owner.Label("双击使用系统图片查看器打开", 10, "Muted");
+        hintLabel = owner.Label("双击使用系统图片查看器打开", 10, "Muted", false);
         hintLabel.Margin = new Thickness(14, 2, 14, 10);
         MainWindow.Place(main, hintLabel, 2);
 
@@ -141,29 +140,44 @@ public sealed class NoteWindow : Window {
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
 
         ApplyTheme();
-        LoadExistingImages();
 
-        Opened += (s, e) => {
-            initialized = true;
-            note.Width = Width;
-            note.Height = Height;
-            note.Left = Position.X;
-            note.Top = Position.Y;
-            editor.Focus();
+        Opened += (s, e) => editor.Focus();
+        Closed += (s, e) => {
+            CleanupAllTempFiles();
+            owner.OnNoteWindowClosed(this);
         };
-        PositionChanged += (s, e) => {
-            if (!initialized || WindowState != WindowState.Normal) return;
-            note.Left = Position.X;
-            note.Top = Position.Y;
-            owner.NotifyNoteChanged();
+    }
+
+    void AttachEditorContextMenu() {
+        editor.ContextMenu = new ContextMenu();
+        editor.ContextRequested += (s, e) => {
+            var menu = owner.PopupMenu();
+            var hasSelection = editor.SelectionStart != editor.SelectionEnd;
+            var cut = new MenuItem { Header = T("剪切"), IsEnabled = hasSelection };
+            cut.Click += (s2, e2) => editor.Cut();
+            var copy = new MenuItem { Header = T("复制"), IsEnabled = hasSelection };
+            copy.Click += (s2, e2) => editor.Copy();
+            var paste = new MenuItem { Header = T("粘贴") };
+            paste.Click += async (s2, e2) => {
+                if (await TryPasteImageAsync(reportWhenEmpty: false)) return;
+                var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+                if (clipboard == null) return;
+                var text = await ClipboardExtensions.TryGetTextAsync(clipboard);
+                if (!string.IsNullOrEmpty(text)) InsertTextAtCaret(text);
+            };
+            var pasteImg = new MenuItem { Header = T("粘贴图片") };
+            pasteImg.Click += async (s2, e2) => await TryPasteImageAsync(reportWhenEmpty: true);
+            var selectAll = new MenuItem { Header = T("全选"), IsEnabled = !string.IsNullOrEmpty(editor.Text) };
+            selectAll.Click += (s2, e2) => editor.SelectAll();
+
+            menu.Items.Add(cut);
+            menu.Items.Add(copy);
+            menu.Items.Add(paste);
+            menu.Items.Add(pasteImg);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(selectAll);
+            editor.ContextMenu = menu;
         };
-        SizeChanged += (s, e) => {
-            if (!initialized || WindowState != WindowState.Normal) return;
-            note.Width = Width;
-            note.Height = Height;
-            owner.NotifyNoteChanged();
-        };
-        Closed += (s, e) => owner.OnNoteWindowClosed(this);
     }
 
     public void ApplyTheme() {
@@ -178,7 +192,6 @@ public sealed class NoteWindow : Window {
     }
 
     async void OnEditorPastingFromClipboard(object? sender, RoutedEventArgs e) {
-        // Intercept TextBox paste so we handle image or text cleanly in a single place
         e.Handled = true;
         if (await TryPasteImageAsync(reportWhenEmpty: false)) {
             return;
@@ -210,6 +223,11 @@ public sealed class NoteWindow : Window {
             owner.OpenNewNote();
             return;
         }
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.S) {
+            e.Handled = true;
+            await SaveNoteAsAsync();
+            return;
+        }
         // When editor is NOT focused, handle Ctrl+V / Shift+Insert at window level
         if (!editor.IsFocused &&
             ((e.KeyModifiers == KeyModifiers.Control && e.Key == Key.V) ||
@@ -219,25 +237,109 @@ public sealed class NoteWindow : Window {
         }
     }
 
-    void LoadExistingImages() {
-        imagesPanel.Children.Clear();
-        foreach (var path in note.Images.ToList()) {
-            var resolved = owner.ResolveNoteImagePath(path);
-            if (File.Exists(resolved)) {
-                try {
-                    using var stream = File.OpenRead(resolved);
-                    var bitmap = new Bitmap(stream);
-                    AddImageControl(bitmap, resolved, saveToList: false);
-                } catch (Exception) {
-                    // Ignore corrupted image file on load
-                }
+    async Task SaveNoteAsAsync() {
+        var text = editor.Text ?? "";
+        if (string.IsNullOrWhiteSpace(text) && images.Count == 0) {
+            ShowNotice(T("便签内容为空。"));
+            return;
+        }
+
+        try {
+            var mdType = new FilePickerFileType(T("Markdown 文件")) {
+                Patterns = ["*.md"],
+                MimeTypes = ["text/markdown"]
+            };
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions {
+                Title = T("另存为"),
+                SuggestedFileName = $"note-{DateTime.Now:yyyyMMdd-HHmmss}.md",
+                DefaultExtension = "md",
+                FileTypeChoices = [mdType]
+            });
+            if (file == null) return;
+
+            var localPath = file.TryGetLocalPath();
+            var baseName = !string.IsNullOrWhiteSpace(localPath)
+                ? Path.GetFileNameWithoutExtension(localPath)
+                : Path.GetFileNameWithoutExtension(file.Name);
+            if (string.IsNullOrWhiteSpace(baseName)) baseName = "note";
+
+            var mdContent = await BuildMarkdownAndExportImagesAsync(text, baseName, !string.IsNullOrWhiteSpace(localPath) ? Path.GetDirectoryName(localPath) : null);
+            await using var stream = await file.OpenWriteAsync();
+            stream.SetLength(0);
+            var outBytes = Encoding.UTF8.GetBytes(mdContent);
+            await stream.WriteAsync(outBytes);
+            ShowNotice(F("已保存：{0}", file.Name));
+        } catch (Exception ex) {
+            ShowNotice(ex.Message);
+        }
+    }
+
+    internal async Task<string> BuildMarkdownAndExportImagesAsync(string text, string baseName, string? imageOutputDir) {
+        var sb = new StringBuilder();
+        var trimmed = text.TrimEnd();
+        if (trimmed.Length > 0) {
+            sb.Append(trimmed);
+        }
+
+        if (images.Count > 0 && !string.IsNullOrWhiteSpace(imageOutputDir)) {
+            Directory.CreateDirectory(imageOutputDir);
+            if (sb.Length > 0) sb.AppendLine().AppendLine();
+            for (int i = 0; i < images.Count; i++) {
+                var idx = i + 1;
+                var img = images[i];
+                var imgFileName = images.Count == 1
+                    ? $"{baseName}{img.Extension}"
+                    : $"{baseName}-{idx}{img.Extension}";
+                var imgFullPath = Path.Combine(imageOutputDir, imgFileName);
+                await File.WriteAllBytesAsync(imgFullPath, img.Bytes);
+
+                var linkTarget = imgFileName.IndexOfAny([' ', '(', ')']) >= 0 ? $"<{imgFileName}>" : imgFileName;
+                if (i > 0) sb.AppendLine().AppendLine();
+                sb.Append($"![image {idx}]({linkTarget})");
             }
         }
-        UpdateHintVisibility();
+
+        sb.AppendLine();
+        return sb.ToString();
     }
 
     void UpdateHintVisibility() {
-        hintLabel.IsVisible = imagesPanel.Children.Count > 0;
+        if (imagesPanel.Children.Count > 0) {
+            hintLabel.Text = T("双击使用系统图片查看器打开");
+            hintLabel.IsVisible = true;
+        } else {
+            hintLabel.IsVisible = false;
+        }
+    }
+
+    static bool TryExtractImageFromHtmlClipboard(string? html, out Bitmap? bitmap, out string? localFilePath) {
+        bitmap = null;
+        localFilePath = null;
+        if (string.IsNullOrWhiteSpace(html)) return false;
+
+        var match = Regex.Match(html, @"<img\b[^>]*?\bsrc\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase);
+        if (!match.Success) return false;
+        var src = match.Groups[1].Value.Trim();
+
+        if (src.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)) {
+            int commaIdx = src.IndexOf(',');
+            if (commaIdx > 0 && src[..commaIdx].Contains(";base64", StringComparison.OrdinalIgnoreCase)) {
+                try {
+                    var bytes = Convert.FromBase64String(src[(commaIdx + 1)..].Trim());
+                    using var ms = new MemoryStream(bytes);
+                    bitmap = new Bitmap(ms);
+                    return bitmap.PixelSize.Width > 0 && bitmap.PixelSize.Height > 0;
+                } catch {
+                    return false;
+                }
+            }
+        }
+
+        if (TryResolveImageFileFromText(src, out var resolved)) {
+            localFilePath = resolved;
+            return true;
+        }
+        return false;
     }
 
     static bool TryResolveImageFileFromText(string? rawText, out string filePath) {
@@ -245,7 +347,7 @@ public sealed class NoteWindow : Window {
         if (string.IsNullOrWhiteSpace(rawText)) return false;
         var candidate = rawText.Trim().Trim('"', '\'');
         if (candidate.Contains('\n')) {
-            candidate = candidate.Split('\n', StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+            candidate = candidate.Split('\n', StringSplitOptions.RemoveEmptyEntries)[0].Trim().Trim('"', '\'');
         }
         if (candidate.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
             Uri.TryCreate(candidate, UriKind.Absolute, out var fileUri) && fileUri.IsFile) {
@@ -257,6 +359,19 @@ public sealed class NoteWindow : Window {
             return true;
         }
         return false;
+    }
+
+    static List<string> ExtractImagePathsFromUriListText(string? raw) {
+        var result = new List<string>();
+        if (string.IsNullOrWhiteSpace(raw)) return result;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in raw.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+            if (line.StartsWith('#') || line.Equals("copy", StringComparison.OrdinalIgnoreCase) || line.Equals("cut", StringComparison.OrdinalIgnoreCase)) continue;
+            if (TryResolveImageFileFromText(line, out var resolved) && seen.Add(Path.GetFullPath(resolved))) {
+                result.Add(resolved);
+            }
+        }
+        return result;
     }
 
     public async Task<bool> TryPasteImageAsync(bool reportWhenEmpty) {
@@ -279,10 +394,7 @@ public sealed class NoteWindow : Window {
                     if (!string.IsNullOrEmpty(localPath) && File.Exists(localPath) &&
                         ImageExtensions.Contains(Path.GetExtension(localPath)) &&
                         seenPaths.Add(Path.GetFullPath(localPath))) {
-                        var savedPath = CopyImageFileToConfiguredDir(localPath);
-                        using var stream = File.OpenRead(savedPath);
-                        var bmp = new Bitmap(stream);
-                        AddImageControl(bmp, savedPath, saveToList: true);
+                        AddImageFromFile(localPath);
                         pastedAny = true;
                     }
                 }
@@ -292,60 +404,125 @@ public sealed class NoteWindow : Window {
                 }
             }
 
-            // 2. Check if clipboard text is a direct local image file path
-            var text = await ClipboardExtensions.TryGetTextAsync(clipboard);
-            if (TryResolveImageFileFromText(text, out var pathFromText)) {
-                var savedPath = CopyImageFileToConfiguredDir(pathFromText);
-                using var stream = File.OpenRead(savedPath);
-                var bmp = new Bitmap(stream);
-                AddImageControl(bmp, savedPath, saveToList: true);
-                lastPasteTime = DateTime.UtcNow;
-                return true;
+            // 2. Try Avalonia standard bitmap clipboard extension
+            try {
+                var bitmap = await ClipboardExtensions.TryGetBitmapAsync(clipboard);
+                if (bitmap != null) {
+                    AddImageFromBitmap(bitmap);
+                    lastPasteTime = DateTime.UtcNow;
+                    return true;
+                }
+            } catch {
+                // Fall through to raw clipboard formats
             }
 
-            // 3. Try Avalonia standard bitmap clipboard extension
-            var bitmap = await ClipboardExtensions.TryGetBitmapAsync(clipboard);
-            if (bitmap != null) {
-                var savedPath = SaveBitmapToConfiguredDir(bitmap);
-                AddImageControl(bitmap, savedPath, saveToList: true);
-                lastPasteTime = DateTime.UtcNow;
-                return true;
-            }
-
-            // 4. Try raw image formats from clipboard (image/png, image/jpeg, image/bmp, etc.)
+            // 3. Try raw image & file-list formats from clipboard
 #pragma warning disable CS0618
             var formats = await clipboard.GetFormatsAsync();
             if (formats != null) {
                 foreach (var format in formats) {
-                    if (format.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
-                        format.Equals("PNG", StringComparison.OrdinalIgnoreCase) ||
-                        format.Equals("BITMAP", StringComparison.OrdinalIgnoreCase)) {
-                        var data = await clipboard.GetDataAsync(format);
-                        if (data is byte[] bytes && bytes.Length > 0) {
-                            using var ms = new MemoryStream(bytes);
-                            var bmp = new Bitmap(ms);
-                            var savedPath = SaveBitmapToConfiguredDir(bmp);
-                            AddImageControl(bmp, savedPath, saveToList: true);
-                            lastPasteTime = DateTime.UtcNow;
-                            return true;
-                        }
-                        if (data is Stream stream) {
-                            using var ms = new MemoryStream();
-                            await stream.CopyToAsync(ms);
-                            var raw = ms.ToArray();
-                            if (raw.Length > 0) {
-                                ms.Position = 0;
-                                var bmp = new Bitmap(ms);
-                                var savedPath = SaveBitmapToConfiguredDir(bmp);
-                                AddImageControl(bmp, savedPath, saveToList: true);
+                    if (format.Contains("gnome-copied-files", StringComparison.OrdinalIgnoreCase) ||
+                        format.Contains("mate-copied-files", StringComparison.OrdinalIgnoreCase) ||
+                        format.Contains("kde-cutselection", StringComparison.OrdinalIgnoreCase) ||
+                        format.Equals("text/uri-list", StringComparison.OrdinalIgnoreCase)) {
+                        try {
+                            var data = await clipboard.GetDataAsync(format);
+                            string? uriText = data switch {
+                                byte[] b when b.Length > 0 => Encoding.UTF8.GetString(b),
+                                string s => s,
+                                _ => null
+                            };
+                            var paths = ExtractImagePathsFromUriListText(uriText);
+                            if (paths.Count > 0) {
+                                foreach (var p in paths) {
+                                    AddImageFromFile(p);
+                                }
                                 lastPasteTime = DateTime.UtcNow;
                                 return true;
                             }
-                        }
+                        } catch { }
+                    }
+                }
+
+                foreach (var format in formats) {
+                    if (format.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
+                        format.Equals("PNG", StringComparison.OrdinalIgnoreCase) ||
+                        format.Equals("BITMAP", StringComparison.OrdinalIgnoreCase) ||
+                        format.Equals("CF_DIB", StringComparison.OrdinalIgnoreCase)) {
+                        try {
+                            var data = await clipboard.GetDataAsync(format);
+                            if (data is byte[] bytes && bytes.Length > 0) {
+                                using var ms = new MemoryStream(bytes);
+                                var bmp = new Bitmap(ms);
+                                AddImageFromBitmap(bmp);
+                                lastPasteTime = DateTime.UtcNow;
+                                return true;
+                            }
+                            if (data is Stream stream) {
+                                using var ms = new MemoryStream();
+                                await stream.CopyToAsync(ms);
+                                if (ms.Length > 0) {
+                                    ms.Position = 0;
+                                    var bmp = new Bitmap(ms);
+                                    AddImageFromBitmap(bmp);
+                                    lastPasteTime = DateTime.UtcNow;
+                                    return true;
+                                }
+                            }
+                        } catch { }
+                    }
+                }
+
+                foreach (var format in formats) {
+                    if (format.Equals("text/html", StringComparison.OrdinalIgnoreCase) ||
+                        format.Equals("HTML Format", StringComparison.OrdinalIgnoreCase)) {
+                        try {
+                            var data = await clipboard.GetDataAsync(format);
+                            string? html = data switch {
+                                byte[] b when b.Length > 0 => Encoding.UTF8.GetString(b),
+                                string s => s,
+                                _ => null
+                            };
+                            if (TryExtractImageFromHtmlClipboard(html, out var htmlBmp, out var htmlFilePath)) {
+                                if (htmlBmp != null) {
+                                    AddImageFromBitmap(htmlBmp);
+                                    lastPasteTime = DateTime.UtcNow;
+                                    return true;
+                                }
+                                if (!string.IsNullOrEmpty(htmlFilePath)) {
+                                    AddImageFromFile(htmlFilePath);
+                                    lastPasteTime = DateTime.UtcNow;
+                                    return true;
+                                }
+                            }
+                        } catch { }
                     }
                 }
             }
 #pragma warning restore CS0618
+
+            // 4. Check if clipboard text is a direct local image file path or file:// URI list
+            var text = await ClipboardExtensions.TryGetTextAsync(clipboard);
+            if (!string.IsNullOrWhiteSpace(text)) {
+                var uriPaths = ExtractImagePathsFromUriListText(text);
+                if (uriPaths.Count > 0) {
+                    foreach (var p in uriPaths) {
+                        AddImageFromFile(p);
+                    }
+                    lastPasteTime = DateTime.UtcNow;
+                    return true;
+                }
+            }
+
+            // 5. Fallback for Linux Wayland / X11 clipboard tools (wl-paste / xclip)
+            var cliImageBytes = await DesktopTools.TryReadLinuxClipboardImageBytesAsync();
+            if (cliImageBytes is { Length: > 0 }) {
+                using var ms = new MemoryStream(cliImageBytes);
+                var bmp = new Bitmap(ms);
+                AddImageFromBitmap(bmp);
+                lastPasteTime = DateTime.UtcNow;
+                return true;
+            }
         } catch (Exception ex) {
             ShowNotice(ex.Message);
             return false;
@@ -359,34 +536,27 @@ public sealed class NoteWindow : Window {
         return false;
     }
 
-    string SaveBitmapToConfiguredDir(Bitmap bitmap) {
-        var dir = owner.GetNoteImageDirectory();
-        Directory.CreateDirectory(dir);
-        var fileName = $"note-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid().ToString("N")[..6]}.png";
-        var fullPath = Path.Combine(dir, fileName);
-        using var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        bitmap.Save(fs);
-        return fullPath;
+    void AddImageFromBitmap(Bitmap bitmap) {
+        using var ms = new MemoryStream();
+        bitmap.Save(ms);
+        AddImageControl(bitmap, ms.ToArray(), ".png");
     }
 
-    string CopyImageFileToConfiguredDir(string sourcePath) {
-        var dir = owner.GetNoteImageDirectory();
-        Directory.CreateDirectory(dir);
+    void AddImageFromFile(string sourcePath) {
+        var bytes = File.ReadAllBytes(sourcePath);
         var ext = Path.GetExtension(sourcePath);
         if (string.IsNullOrWhiteSpace(ext)) ext = ".png";
-        var fileName = $"note-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid().ToString("N")[..6]}{ext}";
-        var fullPath = Path.Combine(dir, fileName);
-        File.Copy(sourcePath, fullPath, overwrite: true);
-        return fullPath;
+        using var ms = new MemoryStream(bytes);
+        var bmp = new Bitmap(ms);
+        AddImageControl(bmp, bytes, ext);
     }
 
-    void AddImageControl(Bitmap bitmap, string filePath, bool saveToList) {
-        if (saveToList && note.Images.Contains(filePath)) return;
-
-        if (saveToList) {
-            note.Images.Add(filePath);
-            owner.NotifyNoteChanged();
-        }
+    void AddImageControl(Bitmap bitmap, byte[] bytes, string extension) {
+        var entry = new PastedImage {
+            Bytes = bytes,
+            Extension = extension
+        };
+        images.Add(entry);
 
         var image = new Image {
             Source = bitmap,
@@ -408,13 +578,14 @@ public sealed class NoteWindow : Window {
 
         void OpenImage() {
             try {
-                var resolved = owner.ResolveNoteImagePath(filePath);
-                if (!File.Exists(resolved)) {
-                    Directory.CreateDirectory(Path.GetDirectoryName(resolved)!);
-                    using var fs = new FileStream(resolved, FileMode.Create, FileAccess.Write, FileShare.Read);
-                    bitmap.Save(fs);
+                if (string.IsNullOrEmpty(entry.TempPreviewPath) || !File.Exists(entry.TempPreviewPath)) {
+                    var tempDir = Path.Combine(Path.GetTempPath(), "YijianTodo-Preview");
+                    Directory.CreateDirectory(tempDir);
+                    var tempPath = Path.Combine(tempDir, $"preview-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid().ToString("N")[..6]}{entry.Extension}");
+                    File.WriteAllBytes(tempPath, entry.Bytes);
+                    entry.TempPreviewPath = tempPath;
                 }
-                DesktopTools.OpenWithDefaultViewer(resolved);
+                DesktopTools.OpenWithDefaultViewer(entry.TempPreviewPath);
             } catch (Exception ex) {
                 ShowNotice(ex.Message);
             }
@@ -422,8 +593,9 @@ public sealed class NoteWindow : Window {
 
         void RemoveImage() {
             imagesPanel.Children.Remove(container);
-            note.Images.Remove(filePath);
-            owner.NotifyNoteChanged();
+            images.Remove(entry);
+            CleanupTempFile(entry.TempPreviewPath);
+            entry.TempPreviewPath = null;
             UpdateHintVisibility();
         }
 
@@ -444,6 +616,21 @@ public sealed class NoteWindow : Window {
 
         imagesPanel.Children.Add(container);
         UpdateHintVisibility();
+    }
+
+    static void CleanupTempFile(string? path) {
+        if (string.IsNullOrEmpty(path)) return;
+        try {
+            if (File.Exists(path)) File.Delete(path);
+        } catch {
+        }
+    }
+
+    void CleanupAllTempFiles() {
+        foreach (var img in images) {
+            CleanupTempFile(img.TempPreviewPath);
+            img.TempPreviewPath = null;
+        }
     }
 
     void ShowNotice(string message) {

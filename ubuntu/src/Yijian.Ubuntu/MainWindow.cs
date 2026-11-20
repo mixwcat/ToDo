@@ -180,46 +180,24 @@ public sealed partial class MainWindow : Window {
         parts.Add(e.Key.ToString());
         return string.Join("+",parts);
     }
-    internal string GetNoteImageDirectory() {
-        var dir=state.NoteImageDir?.Trim();
-        if(string.IsNullOrWhiteSpace(dir))dir=Path.Combine(storage.DirectoryPath,"note-images");
-        return Path.GetFullPath(dir);
-    }
-    internal string ResolveNoteImagePath(string storedPath) {
-        if(Path.IsPathRooted(storedPath))return storedPath;
-        return Path.Combine(GetNoteImageDirectory(),storedPath);
-    }
     internal void UpdateGlobalHotkey()=>globalHotkey?.Update(state.NoteShortcut);
     internal void OpenNewNote() {
         if(capturingShortcut)return;
         var now=DateTime.UtcNow;
         if((now-lastNoteOpened).TotalMilliseconds<220)return;
         lastNoteOpened=now;
-        var note=new StickyNote();
+        double left=double.NaN,top=double.NaN;
         var offset=(openNotes.Count%6)*26;
         if(WindowState==WindowState.Normal){
-            note.Left=Position.X+60+offset;
-            note.Top=Position.Y+60+offset;
+            left=Position.X+60+offset;
+            top=Position.Y+60+offset;
         }
-        state.Notes.Add(note);
-        var win=new NoteWindow(this,note);
+        var win=new NoteWindow(this,left,top);
         openNotes.Add(win);
         win.Show();
         win.Activate();
-        QueueSave();
-    }
-    internal void DeleteNote(NoteWindow win) {
-        state.Notes.Remove(win.Note);
-        openNotes.Remove(win);
-        win.Close();
-        QueueSave();
     }
     internal void OnNoteWindowClosed(NoteWindow win) {
         openNotes.Remove(win);
-        if(string.IsNullOrWhiteSpace(win.Note.Text)&&win.Note.Images.Count==0) {
-            state.Notes.Remove(win.Note);
-        }
-        QueueSave();
     }
-    internal void NotifyNoteChanged()=>QueueSave();
 }

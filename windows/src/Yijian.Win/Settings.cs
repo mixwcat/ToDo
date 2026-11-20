@@ -10,7 +10,7 @@ namespace Yijian.Win;
 
 public sealed partial class MainWindow {
     void Settings() {
-        var dialog=Dialog(T("设置 · 一件 Todo"),420,680);
+        var dialog=Dialog(T("设置 · 一件 Todo"),420,600);
         var panel=new StackPanel{Margin=new Thickness(25,12,25,20)};
         dialog.Content=new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
         panel.Children.Add(Text("偏好设置",19));
@@ -27,8 +27,9 @@ public sealed partial class MainWindow {
         panel.Children.Add(exitOnClose);panel.Children.Add(trayOnClose);
 
         var shortcutLabel=Text("打开便签快捷键",11,"Muted");shortcutLabel.Margin=new Thickness(0,4,0,6);panel.Children.Add(shortcutLabel);
-        var shortcutBox=new TextBox{Text=string.IsNullOrWhiteSpace(state.NoteShortcut)?"F2":state.NoteShortcut,IsReadOnly=true,ToolTip=T("点击后按下快捷键…"),Margin=new Thickness(0,0,0,12)};
+        var shortcutBox=new TextBox{Text=string.IsNullOrWhiteSpace(state.NoteShortcut)?"F2":state.NoteShortcut,IsReadOnly=true,ToolTip=T("点击后按下快捷键…"),Margin=new Thickness(0,0,0,16)};
         Automation(shortcutBox,"打开便签快捷键");
+        InputMethod.SetIsInputMethodEnabled(shortcutBox,false);
         shortcutBox.GotKeyboardFocus+=(s,e)=>capturingShortcut=true;
         shortcutBox.LostKeyboardFocus+=(s,e)=>capturingShortcut=false;
         shortcutBox.PreviewKeyDown+=(s,e)=>{
@@ -40,37 +41,17 @@ public sealed partial class MainWindow {
         };
         panel.Children.Add(shortcutBox);
 
-        var imgDirLabel=Text("便签图片保存路径",11,"Muted");imgDirLabel.Margin=new Thickness(0,0,0,6);panel.Children.Add(imgDirLabel);
-        var imgDirGrid=new Grid{Margin=new Thickness(0,0,0,16)};
-        imgDirGrid.ColumnDefinitions.Add(new ColumnDefinition());
-        imgDirGrid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
-        var imgDirBox=new TextBox{Text=GetNoteImageDirectory(),Margin=new Thickness(0,0,8,0)};
-        Automation(imgDirBox,"便签图片保存路径");
-        var browseBtn=Btn("浏览…","选择图片保存目录",()=>{
-            var picker=new OpenFolderDialog{Title=T("选择图片保存目录")};
-            if(Directory.Exists(imgDirBox.Text))picker.InitialDirectory=imgDirBox.Text;
-            if(picker.ShowDialog(this)==true&&!string.IsNullOrWhiteSpace(picker.FolderName))imgDirBox.Text=picker.FolderName;
-        });
-        browseBtn.Background=B("Soft");
-        Grid.SetColumn(browseBtn,1);
-        imgDirGrid.Children.Add(imgDirBox);imgDirGrid.Children.Add(browseBtn);
-        panel.Children.Add(imgDirGrid);
-
         var configure=Btn("AI 配置","AI 配置",()=>{capturingShortcut=false;dialog.Close();AiSettings();});configure.Background=B("Soft");configure.HorizontalAlignment=HorizontalAlignment.Left;panel.Children.Add(configure);
         var files=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,16,0,12)};
         files.Children.Add(Btn("导出任务","导出任务",Export));files.Children.Add(Btn("导入任务","导入任务",()=>{capturingShortcut=false;dialog.Close();Import();}));panel.Children.Add(files);
         var actions=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};
-        var defaultImgDir=Path.Combine(storage.DirectoryPath,"note-images");
-        actions.Children.Add(Btn("恢复默认设置","恢复默认设置",()=>{chinese.IsChecked=true;dark.IsChecked=false;compact.IsChecked=false;exitOnClose.IsChecked=true;shortcutBox.Text="F2";imgDirBox.Text=defaultImgDir;}));
+        actions.Children.Add(Btn("恢复默认设置","恢复默认设置",()=>{chinese.IsChecked=true;dark.IsChecked=false;compact.IsChecked=false;exitOnClose.IsChecked=true;shortcutBox.Text="F2";}));
         var save=Btn("保存","保存设置",()=>{
             capturingShortcut=false;
             state.Dark=dark.IsChecked==true;state.Compact=compact.IsChecked==true;state.CloseToTray=trayOnClose.IsChecked==true;
             var nextShortcut=shortcutBox.Text?.Trim();
-            state.NoteShortcut=string.IsNullOrWhiteSpace(nextShortcut)?"F2":nextShortcut;
+            state.NoteShortcut=!string.IsNullOrWhiteSpace(nextShortcut)&&MainWindow.TryParseShortcut(nextShortcut,out _,out _)?nextShortcut:"F2";
             UpdateGlobalHotkey();
-            var nextDir=imgDirBox.Text?.Trim()??"";
-            if(!string.IsNullOrWhiteSpace(nextDir)){try{Directory.CreateDirectory(nextDir);state.NoteImageDir=Path.GetFullPath(nextDir);}catch(Exception ex){MessageBox.Show(this,ex.Message);return;}}
-            else state.NoteImageDir="";
             ApplyLanguage(english.IsChecked==true?"en-US":"zh-CN");Theme();QueueSave();dialog.Close();
         });
         save.Background=B("Soft");actions.Children.Add(save);panel.Children.Add(actions);dialog.ShowDialog();

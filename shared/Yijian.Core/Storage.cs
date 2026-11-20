@@ -19,27 +19,25 @@ public sealed class AppState {
     public double Top { get; set; } = double.NaN;
     public double Height { get; set; } = 780;
     public string NoteShortcut { get; set; } = "F2";
-    public string NoteImageDir { get; set; } = "";
-    public List<StickyNote> Notes { get; set; } = [];
-}
-public sealed class StickyNote {
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Text { get; set; } = "";
-    public List<string> Images { get; set; } = [];
-    public double Left { get; set; } = double.NaN;
-    public double Top { get; set; } = double.NaN;
-    public double Width { get; set; } = 320;
-    public double Height { get; set; } = 340;
 }
 public sealed class StateStorage(string directory) {
     public static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy=JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive=true, WriteIndented=true, NumberHandling=System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };
     public string DirectoryPath => directory;
     public string? LoadWarning { get; private set; }
     public AppState Load() {
+        try { var legacyDir=Path.Combine(directory,"note-images"); if(Directory.Exists(legacyDir)) Directory.Delete(legacyDir,true); } catch(IOException) {} catch(UnauthorizedAccessException) {}
         var path=Path.Combine(directory,"state.json");
         foreach(var file in new[]{path,path+".bak"}) {
             if(!File.Exists(file)) continue;
-            try { var s=JsonSerializer.Deserialize<AppState>(File.ReadAllText(file),Json)??throw new IOException("数据为空"); TaskStore.Validate(s.Tasks); return s; }
+            try {
+                var raw=File.ReadAllText(file);
+                var s=JsonSerializer.Deserialize<AppState>(raw,Json)??throw new IOException("数据为空");
+                TaskStore.Validate(s.Tasks);
+                if(raw.Contains("\"notes\"",StringComparison.OrdinalIgnoreCase)||raw.Contains("\"noteImageDir\"",StringComparison.OrdinalIgnoreCase)) {
+                    try { Save(s); } catch(IOException) {} catch(UnauthorizedAccessException) {}
+                }
+                return s;
+            }
             catch(Exception e) when(e is IOException or JsonException or ArgumentException) {
                 LoadWarning="本地数据读取失败，已尝试恢复备份。原文件已保留。";
                 try { File.Copy(file,file+".corrupt-"+DateTime.Now.ToString("yyyyMMddHHmmssfff"),false); } catch(IOException) {} catch(UnauthorizedAccessException) {}
